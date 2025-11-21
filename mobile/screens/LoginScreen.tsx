@@ -5,15 +5,44 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import { login } from "../services/authService";
 
 export default function LoginScreen({ navigation }: any) {
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Later you can add backend login API here.
-    navigation.navigate("Home"); // ⬅ Navigate to Home screen
+  const handleLogin = async () => {
+    if (!emailOrPhone.trim() || !password) {
+      Alert.alert("Validation", "Please enter your email/phone and password");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await login({ emailOrPhone: emailOrPhone.trim(), password });
+
+      console.log("LOGIN SUCCESS:", res);
+
+      // navigate to Home (reset stack)
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
+    } catch (err: any) {
+      console.log("LOGIN ERROR:", err?.response?.data || err?.message || err);
+      const msg =
+        err?.response?.data?.message ||
+        (err?.response?.data?.errors &&
+          err.response.data.errors.map((e: any) => e.msg).join(", ")) ||
+        "Login failed. Check credentials.";
+      Alert.alert("Login Failed", msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -25,6 +54,8 @@ export default function LoginScreen({ navigation }: any) {
         style={styles.input}
         value={emailOrPhone}
         onChangeText={setEmailOrPhone}
+        autoCapitalize="none"
+        keyboardType="email-address"
       />
 
       <TextInput
@@ -35,8 +66,16 @@ export default function LoginScreen({ navigation }: any) {
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>Login</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("Register")}>
@@ -60,12 +99,15 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 15,
+    backgroundColor: "#fff",
   },
   button: {
     backgroundColor: "#1E88E5",
     paddingVertical: 12,
     borderRadius: 8,
     marginBottom: 15,
+    alignItems: "center",
+    justifyContent: "center",
   },
   buttonText: { color: "#fff", textAlign: "center", fontSize: 16 },
   link: { color: "#1E88E5", textAlign: "center" },

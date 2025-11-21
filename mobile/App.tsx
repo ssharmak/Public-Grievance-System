@@ -9,6 +9,11 @@ import WelcomeScreen from "./screens/WelcomeScreen";
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import HomeScreen from "./screens/HomeScreen";
+import SubmitGrievanceScreen from "./screens/SubmitGrievanceScreen";
+import TrackGrievancesScreen from "./screens/TrackGrievancesScreen";
+import GrievanceHistoryScreen from "./screens/GrievanceHistoryScreen";
+import GrievanceDetailsScreen from "./screens/GrievanceDetailsScreen";
+import ProfileScreen from "./screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +30,23 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="Home" component={HomeScreen} />
+          <Stack.Screen
+            name="SubmitGrievance"
+            component={SubmitGrievanceScreen}
+          />
+          <Stack.Screen
+            name="TrackGrievances"
+            component={TrackGrievancesScreen}
+          />
+          <Stack.Screen
+            name="GrievanceHistory"
+            component={GrievanceHistoryScreen}
+          />
+          <Stack.Screen
+            name="GrievanceDetails"
+            component={GrievanceDetailsScreen}
+          />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>
