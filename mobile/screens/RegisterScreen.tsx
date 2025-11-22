@@ -1,27 +1,37 @@
-// mobile/screens/RegisterScreen.tsx
 import React, { useState } from "react";
 import {
   View,
-  Text,
-  TextInput,
+  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  StyleSheet,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
+import {
+  Text,
+  TextInput,
+  Button,
+  HelperText,
+  Appbar,
+  Card,
+  IconButton,
+  Chip,
+} from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
+
+const PRIMARY = "#1E88E5";
 
 export default function RegisterScreen({ navigation }: any) {
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
     middleName: "",
     lastName: "",
-    gender: "select",
+    gender: "",
     dob: null as Date | null,
     primaryContact: "",
     email: "",
@@ -40,13 +50,11 @@ export default function RegisterScreen({ navigation }: any) {
     }
   };
 
-  const validatePassword = (pwd: string) => {
-    const length = pwd.length >= 8;
-    const letter = /[A-Za-z]/.test(pwd);
-    const number = /[0-9]/.test(pwd);
-    const special = /[!@#$%^&*]/.test(pwd);
-    return length && letter && number && special;
-  };
+  const validatePassword = (pwd: string) =>
+    pwd.length >= 8 &&
+    /[A-Za-z]/.test(pwd) &&
+    /[0-9]/.test(pwd) &&
+    /[!@#$%^&*]/.test(pwd);
 
   const handleRegister = async () => {
     if (
@@ -54,212 +62,249 @@ export default function RegisterScreen({ navigation }: any) {
       !form.lastName ||
       !form.primaryContact ||
       !form.email ||
-      form.gender === "select" ||
+      !form.gender ||
       !form.dob
     ) {
-      Alert.alert("Error", "Please fill all required fields.");
-      return;
+      return alert("Please fill all required fields.");
     }
 
     if (form.password !== form.confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
-      return;
+      return alert("Passwords do not match.");
     }
 
     if (!validatePassword(form.password)) {
-      Alert.alert(
-        "Error",
-        "Password must be at least 8 characters and contain letters, numbers, and a special character."
+      return alert(
+        "Password must contain 8+ characters, letters, numbers & a special symbol."
       );
-      return;
     }
 
     try {
-      const payload = {
-        firstName: form.firstName,
-        middleName: form.middleName,
-        lastName: form.lastName,
-        gender: form.gender,
-        // send ISO string so server-side validator accepts it
-        dob: form.dob ? form.dob.toISOString() : null,
-        primaryContact: form.primaryContact,
-        email: form.email,
-        password: form.password,
-      };
+      const payload = { ...form, dob: form.dob?.toISOString() };
 
-      // for emulator: http://10.0.2.2:5000  ; for physical device use machine IP run ipconfig and look for IPV4 and paste the address
-      const res = await axios.post(
-        "http://192.168.34.126:5000/api/auth/register",
-        payload,
-        { timeout: 60000 }
-      );
+      await axios.post("http://192.168.34.126:5000/api/auth/register", payload);
 
-      Alert.alert("Success", "Account created successfully!");
+      alert("Registration Successful!");
       navigation.navigate("Login");
     } catch (err: any) {
-      console.log("Register error:", err?.response?.data || err.message);
-      const message =
-        err?.response?.data?.message ||
-        (err?.response?.data?.errors &&
-          err.response.data.errors.map((e: any) => e.msg).join(", ")) ||
-        "Registration failed.";
-      Alert.alert("Error", message);
+      alert(err?.response?.data?.message || "Registration failed");
     }
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Create Account</Text>
+    <View style={styles.screen}>
+      <Appbar.Header elevated>
+        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.Content title="Register" />
+      </Appbar.Header>
 
-      <TextInput
-        placeholder="First Name *"
-        style={styles.input}
-        value={form.firstName}
-        onChangeText={(v) => handleChange("firstName", v)}
-      />
-
-      <TextInput
-        placeholder="Middle Name"
-        style={styles.input}
-        value={form.middleName}
-        onChangeText={(v) => handleChange("middleName", v)}
-      />
-
-      <TextInput
-        placeholder="Last Name *"
-        style={styles.input}
-        value={form.lastName}
-        onChangeText={(v) => handleChange("lastName", v)}
-      />
-
-      <Text style={styles.label}>Gender *</Text>
-      <View style={styles.pickerBox}>
-        <Picker
-          selectedValue={form.gender}
-          onValueChange={(v) => handleChange("gender", v)}
-        >
-          <Picker.Item label="Select Gender" value="select" />
-          <Picker.Item label="Male" value="male" />
-          <Picker.Item label="Female" value="female" />
-          <Picker.Item label="Transgender" value="transgender" />
-          <Picker.Item label="Other" value="other" />
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Date of Birth *</Text>
-      <TouchableOpacity
-        style={styles.dateButton}
-        onPress={() => setShowDatePicker(true)}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
       >
-        <Text style={styles.dateText}>
-          {form.dob ? form.dob.toDateString() : "Select Date of Birth"}
-        </Text>
-      </TouchableOpacity>
+        <ScrollView contentContainerStyle={styles.container}>
+          <Card style={styles.card} mode="elevated">
+            <Card.Content>
+              {/* Full Name */}
+              <Text style={styles.section}>Personal Info</Text>
 
-      {showDatePicker && (
-        <DateTimePicker
-          value={form.dob || new Date(2000, 0, 1)}
-          mode="date"
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={handleDateChange}
-          maximumDate={new Date()}
-        />
-      )}
+              <TextInput
+                mode="outlined"
+                label="First Name *"
+                style={styles.input}
+                value={form.firstName}
+                onChangeText={(v) => handleChange("firstName", v)}
+              />
 
-      <TextInput
-        placeholder="Primary Contact *"
-        style={styles.input}
-        value={form.primaryContact}
-        onChangeText={(v) => handleChange("primaryContact", v)}
-        keyboardType="phone-pad"
-      />
+              <TextInput
+                mode="outlined"
+                label="Middle Name"
+                style={styles.input}
+                value={form.middleName}
+                onChangeText={(v) => handleChange("middleName", v)}
+              />
 
-      <TextInput
-        placeholder="Email *"
-        style={styles.input}
-        value={form.email}
-        onChangeText={(v) => handleChange("email", v)}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
+              <TextInput
+                mode="outlined"
+                label="Last Name *"
+                style={styles.input}
+                value={form.lastName}
+                onChangeText={(v) => handleChange("lastName", v)}
+              />
 
-      <TextInput
-        placeholder="Password *"
-        style={styles.input}
-        secureTextEntry
-        value={form.password}
-        onChangeText={(v) => handleChange("password", v)}
-      />
+              {/* Gender */}
+              <Text style={styles.label}>Gender *</Text>
+              <View style={styles.dropdown}>
+                <TouchableOpacity
+                  onPress={() =>
+                    handleChange("gender", form.gender ? "" : "select")
+                  }
+                >
+                  <Text style={styles.dropdownText}>
+                    {form.gender ? form.gender.toUpperCase() : "Select Gender"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-      <TextInput
-        placeholder="Confirm Password *"
-        style={styles.input}
-        secureTextEntry
-        value={form.confirmPassword}
-        onChangeText={(v) => handleChange("confirmPassword", v)}
-      />
+              <View style={styles.genderRow}>
+                {["male", "female", "transgender", "other"].map((g) => (
+                  <Chip
+                    key={g}
+                    mode={form.gender === g ? "flat" : "outlined"}
+                    style={[
+                      styles.genderChip,
+                      form.gender === g && styles.genderChipActive,
+                    ]}
+                    onPress={() => handleChange("gender", g)}
+                  >
+                    {g}
+                  </Chip>
+                ))}
+              </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleRegister}>
-        <Text style={styles.buttonText}>Register</Text>
-      </TouchableOpacity>
+              {/* Date of Birth */}
+              <Text style={styles.label}>Date of Birth *</Text>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                style={styles.dateBtn}
+              >
+                <Text style={styles.dateText}>
+                  {form.dob ? form.dob.toDateString() : "Select Date"}
+                </Text>
+              </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-        <Text style={styles.loginLink}>Already have an account? Login</Text>
-      </TouchableOpacity>
-    </ScrollView>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.dob || new Date(2000, 0, 1)}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  maximumDate={new Date()}
+                  onChange={handleDateChange}
+                />
+              )}
+
+              {/* Contact + Email */}
+              <TextInput
+                label="Primary Contact *"
+                mode="outlined"
+                style={styles.input}
+                keyboardType="phone-pad"
+                value={form.primaryContact}
+                onChangeText={(v) => handleChange("primaryContact", v)}
+              />
+
+              <TextInput
+                label="Email *"
+                mode="outlined"
+                style={styles.input}
+                keyboardType="email-address"
+                value={form.email}
+                onChangeText={(v) => handleChange("email", v)}
+              />
+
+              {/* Password */}
+              <TextInput
+                label="Password *"
+                mode="outlined"
+                secureTextEntry={!passwordVisible}
+                right={
+                  <TextInput.Icon
+                    icon={passwordVisible ? "eye-off" : "eye"}
+                    onPress={() => setPasswordVisible(!passwordVisible)}
+                  />
+                }
+                style={styles.input}
+                value={form.password}
+                onChangeText={(v) => handleChange("password", v)}
+              />
+
+              {/* Confirm Password */}
+              <TextInput
+                label="Confirm Password *"
+                mode="outlined"
+                secureTextEntry={!confirmPasswordVisible}
+                right={
+                  <TextInput.Icon
+                    icon={confirmPasswordVisible ? "eye-off" : "eye"}
+                    onPress={() =>
+                      setConfirmPasswordVisible(!confirmPasswordVisible)
+                    }
+                  />
+                }
+                style={styles.input}
+                value={form.confirmPassword}
+                onChangeText={(v) => handleChange("confirmPassword", v)}
+              />
+
+              <HelperText type="info">
+                * Mandatory fields must be filled.
+              </HelperText>
+
+              <Button
+                mode="contained"
+                style={styles.registerBtn}
+                buttonColor={PRIMARY}
+                onPress={handleRegister}
+              >
+                Register
+              </Button>
+
+              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                <Text style={styles.loginLink}>
+                  Already have an account? Login
+                </Text>
+              </TouchableOpacity>
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, marginTop: 20 },
-  title: {
-    fontSize: 26,
+  screen: { flex: 1, backgroundColor: "#F5F6FA" },
+  container: { padding: 18, paddingBottom: 60 },
+  card: {
+    borderRadius: 20,
+    paddingVertical: 10,
+  },
+  label: { marginTop: 10, marginBottom: 6, fontWeight: "600", color: "#444" },
+  section: {
+    fontSize: 18,
     fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 25,
+    marginBottom: 10,
+    color: PRIMARY,
   },
-  input: {
+  input: { marginBottom: 12, backgroundColor: "#fff" },
+  genderRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
+  },
+  genderChip: { backgroundColor: "#fff" },
+  genderChipActive: { backgroundColor: "#E3F2FD", borderColor: PRIMARY },
+  dropdown: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
+    borderColor: "#ddd",
+    padding: 10,
     borderRadius: 8,
-    marginBottom: 15,
+    backgroundColor: "#fff",
   },
-  label: {
-    marginBottom: 5,
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  pickerBox: {
+  dropdownText: { fontSize: 15, color: "#555" },
+  dateBtn: {
+    padding: 14,
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#ddd",
     borderRadius: 8,
-    marginBottom: 15,
+    marginBottom: 10,
   },
-  dateButton: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  dateText: { fontSize: 16, color: "#444" },
-  button: {
-    backgroundColor: "#43A047",
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "white",
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  dateText: { fontSize: 15, color: "#333" },
+  registerBtn: { marginTop: 15, paddingVertical: 8, borderRadius: 10 },
   loginLink: {
-    color: "#1E88E5",
     textAlign: "center",
+    color: PRIMARY,
     marginTop: 15,
-    fontSize: 15,
+    fontWeight: "600",
   },
 });

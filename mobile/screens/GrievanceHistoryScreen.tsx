@@ -1,24 +1,44 @@
 import React, { useEffect, useState } from "react";
+import { View, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import {
-  View,
+  Card,
   Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
-import { getMyGrievances } from "../services/grievanceService";
+  Chip,
+  ActivityIndicator,
+  Appbar,
+} from "react-native-paper";
 import { useIsFocused } from "@react-navigation/native";
+import { getMyGrievances } from "../services/grievanceService";
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "Pending":
+      return "#FB8C00";
+    case "In Progress":
+      return "#1E88E5";
+    case "Resolved":
+      return "#43A047";
+    case "Rejected":
+      return "#D32F2F";
+    default:
+      return "#757575";
+  }
+};
 
 export default function GrievanceHistoryScreen({ navigation }: any) {
   const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const isFocused = useIsFocused();
 
   const load = async () => {
     try {
+      setLoading(true);
       const res = await getMyGrievances();
       setItems(res);
     } catch (err) {
-      console.error(err);
+      console.error("HISTORY ERROR:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -27,39 +47,119 @@ export default function GrievanceHistoryScreen({ navigation }: any) {
   }, [isFocused]);
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 10 }}>
-        My Grievances
-      </Text>
-      <FlatList
-        data={items}
-        keyExtractor={(i) => i._id}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() =>
-              navigation.navigate("GrievanceDetails", { id: item.grievanceId })
-            }
-          >
-            <Text style={{ fontWeight: "600" }}>
-              {item.grievanceId} — {item.title}
-            </Text>
-            <Text style={{ color: "#666" }}>
-              {item.status} • {new Date(item.createdAt).toLocaleString()}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
+    <View style={styles.screen}>
+      {/* Header */}
+      <Appbar.Header>
+        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.Content title="Grievance History" />
+      </Appbar.Header>
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" />
+          <Text style={{ marginTop: 8 }}>Loading...</Text>
+        </View>
+      ) : (
+        <>
+          {items.length === 0 ? (
+            <View style={styles.center}>
+              <Text style={{ opacity: 0.7 }}>No grievance records found</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={items}
+              contentContainerStyle={{ padding: 16 }}
+              keyExtractor={(item) => item._id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={{ marginBottom: 14 }}
+                  onPress={() =>
+                    navigation.navigate("GrievanceDetails", {
+                      id: item.grievanceId,
+                    })
+                  }
+                >
+                  <Card mode="elevated" style={styles.card}>
+                    <Card.Content>
+                      <Text style={styles.title}>{item.title}</Text>
+                      <Text style={styles.grievanceId}>
+                        ID: {item.grievanceId}
+                      </Text>
+
+                      <View style={styles.row}>
+                        <Text style={styles.dateText}>
+                          📅 {new Date(item.createdAt).toDateString()}
+                        </Text>
+
+                        <Chip
+                          style={[
+                            styles.statusChip,
+                            {
+                              backgroundColor:
+                                getStatusColor(item.status) + "20",
+                            },
+                          ]}
+                          textStyle={{
+                            color: getStatusColor(item.status),
+                            fontWeight: "700",
+                          }}
+                        >
+                          {item.status}
+                        </Chip>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#F5F7FB" },
+
   card: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 8,
-    marginBottom: 10,
+    borderRadius: 14,
+    padding: 6,
+  },
+
+  title: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#222",
+    marginBottom: 4,
+  },
+
+  grievanceId: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 8,
+  },
+
+  statusChip: {
+    height: 28,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+  },
+
+  dateText: {
+    fontSize: 12,
+    color: "#777",
+  },
+
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

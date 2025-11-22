@@ -1,12 +1,12 @@
-// mobile/screens/ProfileScreen.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
   ScrollView,
-  Alert,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
 import {
   Text,
@@ -15,80 +15,69 @@ import {
   Appbar,
   Card,
   ActivityIndicator,
+  Avatar,
+  Chip,
+  Divider,
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
+
 import { getMyProfile, updateMyProfile } from "../services/userService";
 import { logout } from "../services/authService";
+
+const PRIMARY = "#1E88E5";
+const CHIP_ACTIVE = "#E3F2FD";
 
 export default function ProfileScreen({ navigation }: any) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const loadProfile = async () => {
     try {
-      console.log("📌 Attempting to load profile...");
       setLoading(true);
-
       const token = await AsyncStorage.getItem("token");
-      console.log("🔐 token (stored):", !!token);
+      console.log("Token Available:", !!token);
 
       const data = await getMyProfile();
-      console.log("📥 PROFILE DATA:", data);
       setUser(data);
     } catch (err: any) {
-      console.log(
-        "❌ PROFILE ERROR:",
-        err?.response?.data || err.message || err
-      );
-      // If unauthorized, force logout and navigate to Login
-      const status = err?.response?.status;
-      if (status === 401) {
-        Alert.alert("Session expired", "Please login again.", [
-          {
-            text: "OK",
-            onPress: async () => {
-              await logout();
-              navigation.reset({ index: 0, routes: [{ name: "Login" }] });
-            },
-          },
-        ]);
-        return;
-      }
-      Alert.alert("Error", "Could not load profile");
+      console.log("Profile Loading Error:", err?.response?.data || err);
+      Alert.alert("Error", "Unable to load profile");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // load on mount
     loadProfile();
-    // also reload when screen focused (optionally)
-    const unsub = navigation.addListener("focus", () => loadProfile());
+    const unsub = navigation.addListener("focus", loadProfile);
     return unsub;
   }, []);
+
+  if (!user)
+    return (
+      <View style={styles.loadingBox}>
+        <ActivityIndicator size="large" />
+        <Text style={{ marginTop: 10 }}>Loading Profile...</Text>
+      </View>
+    );
+
+  const handleDateChange = (event: any, selectedDate: any) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setUser({ ...user, dob: selectedDate.toISOString() });
+    }
+  };
 
   const save = async () => {
     try {
       setLoading(true);
-      const payload: any = {
-        firstName: user.firstName,
-        middleName: user.middleName,
-        lastName: user.lastName,
-        gender: user.gender,
-        dob: user.dob,
-        primaryContact: user.primaryContact,
-        secondaryContact: user.secondaryContact,
-        email: user.email,
-        address: user.address || {},
-      };
-      const updated = await updateMyProfile(payload);
-      console.log("Profile updated:", updated);
+      await updateMyProfile(user);
       Alert.alert("Success", "Profile updated successfully");
-      navigation.goBack();
     } catch (err: any) {
-      console.log("Update error:", err?.response?.data || err.message || err);
-      Alert.alert("Error", err?.response?.data?.message || "Update failed");
+      console.log(err);
+      Alert.alert("Error", "Update failed");
     } finally {
       setLoading(false);
     }
@@ -99,192 +88,172 @@ export default function ProfileScreen({ navigation }: any) {
     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
   };
 
-  if (loading && !user) {
-    return (
-      <View style={styles.loadingBox}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 10 }}>Loading profile...</Text>
-      </View>
-    );
-  }
-
-  if (!user) {
-    return (
-      <View style={styles.loadingBox}>
-        <Text>No profile available.</Text>
-        <Button
-          mode="contained"
-          onPress={loadProfile}
-          style={{ marginTop: 12 }}
-        >
-          Retry
-        </Button>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.screen}>
-      <Appbar.Header>
+      {/* Header */}
+      <Appbar.Header elevated>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="My Profile" />
+        <Appbar.Action icon="logout" onPress={handleLogout} />
       </Appbar.Header>
 
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>
+      {/* User Card */}
+      <View style={styles.profileHeader}>
+        <Avatar.Text
+          size={70}
+          label={(user.firstName?.[0] || "?") + (user.lastName?.[0] || "")}
+          style={{ backgroundColor: PRIMARY }}
+          color="#fff"
+        />
+        <Text style={styles.userName}>
           {user.firstName} {user.lastName}
         </Text>
-        <Text style={styles.headerSubtitle}>{user.email}</Text>
+        <Text style={styles.userEmail}>{user.email}</Text>
       </View>
 
+      {/* Content */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.formContainer}>
-          <Card style={styles.card} mode="elevated">
+          {/* PERSONAL CARD */}
+          <Card style={styles.card}>
+            <Card.Title title="Personal Details" />
+            <Divider />
             <Card.Content>
-              <Text style={styles.sectionTitle}>Personal Details</Text>
-
               <TextInput
-                label="First Name"
                 mode="outlined"
+                label="First Name"
                 style={styles.input}
-                value={user.firstName || ""}
+                value={user.firstName}
                 onChangeText={(v) => setUser({ ...user, firstName: v })}
               />
 
               <TextInput
-                label="Middle Name"
                 mode="outlined"
+                label="Middle Name"
                 style={styles.input}
                 value={user.middleName || ""}
                 onChangeText={(v) => setUser({ ...user, middleName: v })}
               />
 
               <TextInput
-                label="Last Name"
                 mode="outlined"
+                label="Last Name"
                 style={styles.input}
                 value={user.lastName || ""}
                 onChangeText={(v) => setUser({ ...user, lastName: v })}
               />
 
-              <Text style={styles.sectionTitle}>Contact Details</Text>
+              <Text style={styles.label}>Gender</Text>
+              <View style={styles.genderRow}>
+                {["male", "female", "transgender", "other"].map((g) => (
+                  <Chip
+                    key={g}
+                    style={[
+                      styles.genderChip,
+                      user.gender === g && styles.genderChipActive,
+                    ]}
+                    onPress={() => setUser({ ...user, gender: g })}
+                  >
+                    {g}
+                  </Chip>
+                ))}
+              </View>
 
+              <Text style={styles.label}>Date of Birth</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.dateText}>
+                  {user.dob ? new Date(user.dob).toDateString() : "Select Date"}
+                </Text>
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={user.dob ? new Date(user.dob) : new Date(2000, 0, 1)}
+                  mode="date"
+                  onChange={handleDateChange}
+                  display="default"
+                  maximumDate={new Date()}
+                />
+              )}
+            </Card.Content>
+          </Card>
+
+          {/* CONTACT CARD */}
+          <Card style={styles.card}>
+            <Card.Title title="Contact Details" />
+            <Divider />
+            <Card.Content>
               <TextInput
-                label="Primary Contact"
                 mode="outlined"
+                label="Primary Contact"
                 style={styles.input}
                 value={user.primaryContact || ""}
                 keyboardType="phone-pad"
                 onChangeText={(v) => setUser({ ...user, primaryContact: v })}
               />
-
               <TextInput
-                label="Secondary Contact"
                 mode="outlined"
+                label="Secondary Contact"
                 style={styles.input}
                 value={user.secondaryContact || ""}
                 keyboardType="phone-pad"
                 onChangeText={(v) => setUser({ ...user, secondaryContact: v })}
               />
-
-              <TextInput
-                label="Email"
-                mode="outlined"
-                style={styles.input}
-                value={user.email || ""}
-                keyboardType="email-address"
-                onChangeText={(v) => setUser({ ...user, email: v })}
-              />
-
-              <Text style={styles.sectionTitle}>Address</Text>
-
-              <TextInput
-                label="House Name/Number"
-                mode="outlined"
-                style={styles.input}
-                value={user.address?.houseNameOrNumber || ""}
-                onChangeText={(v) =>
-                  setUser({
-                    ...user,
-                    address: { ...(user.address || {}), houseNameOrNumber: v },
-                  })
-                }
-              />
-
-              <TextInput
-                label="Locality"
-                mode="outlined"
-                style={styles.input}
-                value={user.address?.locality || ""}
-                onChangeText={(v) =>
-                  setUser({
-                    ...user,
-                    address: { ...(user.address || {}), locality: v },
-                  })
-                }
-              />
-
-              <TextInput
-                label="District"
-                mode="outlined"
-                style={styles.input}
-                value={user.address?.district || ""}
-                onChangeText={(v) =>
-                  setUser({
-                    ...user,
-                    address: { ...(user.address || {}), district: v },
-                  })
-                }
-              />
-
-              <TextInput
-                label="State"
-                mode="outlined"
-                style={styles.input}
-                value={user.address?.state || ""}
-                onChangeText={(v) =>
-                  setUser({
-                    ...user,
-                    address: { ...(user.address || {}), state: v },
-                  })
-                }
-              />
-
-              <TextInput
-                label="Pincode"
-                mode="outlined"
-                style={styles.input}
-                value={user.address?.pincode || ""}
-                keyboardType="numeric"
-                onChangeText={(v) =>
-                  setUser({
-                    ...user,
-                    address: { ...(user.address || {}), pincode: v },
-                  })
-                }
-              />
-
-              <Button
-                mode="contained"
-                style={styles.saveButton}
-                onPress={save}
-                loading={loading}
-              >
-                Save Changes
-              </Button>
-
-              <Button
-                mode="outlined"
-                style={styles.logoutButton}
-                onPress={handleLogout}
-              >
-                Logout
-              </Button>
             </Card.Content>
           </Card>
+
+          {/* ADDRESS CARD */}
+          <Card style={styles.card}>
+            <Card.Title title="Address" />
+            <Divider />
+            <Card.Content>
+              {[
+                "houseNameOrNumber",
+                "locality",
+                "district",
+                "state",
+                "pincode",
+              ].map((field, index) => (
+                <TextInput
+                  key={index}
+                  mode="outlined"
+                  label={
+                    field === "houseNameOrNumber"
+                      ? "House Name/Number"
+                      : field.charAt(0).toUpperCase() + field.slice(1)
+                  }
+                  style={styles.input}
+                  value={user.address?.[field] || ""}
+                  onChangeText={(v) =>
+                    setUser({
+                      ...user,
+                      address: { ...(user.address || {}), [field]: v },
+                    })
+                  }
+                  keyboardType={field === "pincode" ? "numeric" : "default"}
+                />
+              ))}
+            </Card.Content>
+          </Card>
+
+          {/* BUTTONS */}
+          <Button
+            mode="contained"
+            onPress={save}
+            loading={loading}
+            buttonColor={PRIMARY}
+            style={styles.saveButton}
+          >
+            Save Changes
+          </Button>
+
+          <View style={{ height: 80 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -293,26 +262,50 @@ export default function ProfileScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F5F6FA" },
-  headerContainer: {
-    backgroundColor: "#1E88E5",
+
+  profileHeader: {
+    alignItems: "center",
     paddingVertical: 28,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    backgroundColor: PRIMARY,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  headerTitle: { fontSize: 24, fontWeight: "700", color: "#fff" },
-  headerSubtitle: { fontSize: 14, color: "#E3F2FD", marginTop: 4 },
-  formContainer: { padding: 20 },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: 10,
-    marginBottom: 10,
-    color: "#444",
+  userName: { fontSize: 22, fontWeight: "700", color: "#fff", marginTop: 8 },
+  userEmail: { color: "#E8F3FF", fontSize: 13, marginTop: 2 },
+
+  formContainer: { padding: 18, paddingBottom: 60 },
+
+  card: {
+    borderRadius: 18,
+    marginBottom: 18,
   },
-  card: { borderRadius: 18, padding: 5 },
+
   input: { marginBottom: 12, backgroundColor: "#fff" },
-  saveButton: { marginTop: 15, paddingVertical: 6, borderRadius: 10 },
-  logoutButton: { marginTop: 12, borderRadius: 10, paddingVertical: 6 },
+
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#444",
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  genderRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  genderChip: { backgroundColor: "#fff" },
+  genderChipActive: { backgroundColor: CHIP_ACTIVE, borderColor: PRIMARY },
+
+  dateButton: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 12,
+    borderRadius: 8,
+  },
+  dateText: { color: "#555" },
+
+  saveButton: {
+    marginTop: 16,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
