@@ -28,10 +28,14 @@ export default function LoginScreen({ navigation }: any) {
       console.log("LOGIN SUCCESS:", res);
 
       // navigate to Home (reset stack)
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Home" }],
-      });
+      if (res.token) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Home" }],
+        });
+      } else {
+        Alert.alert("Error", "Token missing! Try logging in again.");
+      }
     } catch (err: any) {
       console.log("LOGIN ERROR:", err?.response?.data || err?.message || err);
       const msg =

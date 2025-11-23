@@ -7,7 +7,7 @@ const grievanceSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false, // null for anonymous
     },
 
     createdBy: {
@@ -16,7 +16,11 @@ const grievanceSchema = new mongoose.Schema(
       primaryContact: String,
     },
 
-    categoryId: { type: String, required: true },
+    // 👉 No more ObjectId references for category
+    category: {
+      key: { type: String, required: true }, // ex: "electricity"
+      name: { type: String, required: true }, // ex: "Electricity & Power"
+    },
 
     title: { type: String, required: true },
     description: { type: String },
@@ -28,8 +32,6 @@ const grievanceSchema = new mongoose.Schema(
       enum: ["Submitted", "In Review", "Assigned", "Resolved", "Closed"],
       default: "Submitted",
     },
-
-    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 
     priority: {
       type: String,

@@ -7,14 +7,14 @@ const notificationSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    grievanceId: { type: mongoose.Schema.Types.ObjectId, ref: "Grievance" },
-    notification: {
-      sms: { type: Boolean, default: false },
-      email: { type: Boolean, default: false },
-      push: { type: Boolean, default: false },
+    type: {
+      type: String,
+      enum: ["email", "sms", "push", "inapp"],
+      default: "inapp",
     },
     title: String,
     message: String,
+    meta: {},
     isRead: { type: Boolean, default: false },
   },
   { timestamps: true }

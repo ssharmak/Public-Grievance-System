@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from "react-native";
 import {
   Text,
@@ -14,11 +15,10 @@ import {
   HelperText,
   Appbar,
   Card,
-  IconButton,
   Chip,
 } from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import axios from "axios";
+import { register } from "../services/authService";
 
 const PRIMARY = "#1E88E5";
 
@@ -39,60 +39,63 @@ export default function RegisterScreen({ navigation }: any) {
     confirmPassword: "",
   });
 
-  const handleChange = (key: string, value: any) => {
+  const handleChange = (key: string, value: any) =>
     setForm({ ...form, [key]: value });
-  };
 
-  const handleDateChange = (event: any, selectedDate: any) => {
+  const handleDateChange = (_: any, selectedDate: any) => {
     setShowDatePicker(false);
-    if (selectedDate) {
-      setForm({ ...form, dob: selectedDate });
-    }
+    if (selectedDate) setForm({ ...form, dob: selectedDate });
   };
 
-  const validatePassword = (pwd: string) =>
-    pwd.length >= 8 &&
-    /[A-Za-z]/.test(pwd) &&
-    /[0-9]/.test(pwd) &&
-    /[!@#$%^&*]/.test(pwd);
+  const validatePassword = (p: string) =>
+    p.length >= 8 &&
+    /[A-Za-z]/.test(p) &&
+    /[0-9]/.test(p) &&
+    /[!@#$%^&*]/.test(p);
 
   const handleRegister = async () => {
-    if (
-      !form.firstName ||
-      !form.lastName ||
-      !form.primaryContact ||
-      !form.email ||
-      !form.gender ||
-      !form.dob
-    ) {
-      return alert("Please fill all required fields.");
+    if (!form.firstName || !form.lastName || !form.gender || !form.dob) {
+      return Alert.alert("Missing Fields", "Please fill all required fields");
     }
 
     if (form.password !== form.confirmPassword) {
-      return alert("Passwords do not match.");
+      return Alert.alert("Error", "Passwords do not match");
     }
 
     if (!validatePassword(form.password)) {
-      return alert(
-        "Password must contain 8+ characters, letters, numbers & a special symbol."
+      return Alert.alert(
+        "Weak Password",
+        "Min 8 chars, include letters, numbers, and symbols"
       );
     }
 
     try {
-      const payload = { ...form, dob: form.dob?.toISOString() };
+      const payload = {
+        ...form,
+        dob: form.dob?.toISOString(),
+      };
 
-      await axios.post("http://192.168.34.126:5000/api/auth/register", payload);
+      console.log("REGISTER SENDING:", payload);
 
-      alert("Registration Successful!");
-      navigation.navigate("Login");
+      const res = await register(payload);
+      console.log("REGISTER RESPONSE:", res);
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
     } catch (err: any) {
-      alert(err?.response?.data?.message || "Registration failed");
+      console.log(err.response?.data || err);
+      Alert.alert(
+        "Registration Failed",
+        err?.response?.data?.message || "Something went wrong"
+      );
     }
   };
 
   return (
     <View style={styles.screen}>
-      <Appbar.Header elevated>
+      <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
         <Appbar.Content title="Register" />
       </Appbar.Header>
@@ -104,28 +107,27 @@ export default function RegisterScreen({ navigation }: any) {
         <ScrollView contentContainerStyle={styles.container}>
           <Card style={styles.card} mode="elevated">
             <Card.Content>
-              {/* Full Name */}
               <Text style={styles.section}>Personal Info</Text>
 
               <TextInput
-                mode="outlined"
                 label="First Name *"
+                mode="outlined"
                 style={styles.input}
                 value={form.firstName}
                 onChangeText={(v) => handleChange("firstName", v)}
               />
 
               <TextInput
-                mode="outlined"
                 label="Middle Name"
+                mode="outlined"
                 style={styles.input}
                 value={form.middleName}
                 onChangeText={(v) => handleChange("middleName", v)}
               />
 
               <TextInput
-                mode="outlined"
                 label="Last Name *"
+                mode="outlined"
                 style={styles.input}
                 value={form.lastName}
                 onChangeText={(v) => handleChange("lastName", v)}
@@ -133,41 +135,29 @@ export default function RegisterScreen({ navigation }: any) {
 
               {/* Gender */}
               <Text style={styles.label}>Gender *</Text>
-              <View style={styles.dropdown}>
-                <TouchableOpacity
-                  onPress={() =>
-                    handleChange("gender", form.gender ? "" : "select")
-                  }
-                >
-                  <Text style={styles.dropdownText}>
-                    {form.gender ? form.gender.toUpperCase() : "Select Gender"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
               <View style={styles.genderRow}>
                 {["male", "female", "transgender", "other"].map((g) => (
                   <Chip
                     key={g}
+                    onPress={() => handleChange("gender", g)}
                     mode={form.gender === g ? "flat" : "outlined"}
                     style={[
                       styles.genderChip,
                       form.gender === g && styles.genderChipActive,
                     ]}
-                    onPress={() => handleChange("gender", g)}
                   >
                     {g}
                   </Chip>
                 ))}
               </View>
 
-              {/* Date of Birth */}
+              {/* Date Picker */}
               <Text style={styles.label}>Date of Birth *</Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker(true)}
                 style={styles.dateBtn}
               >
-                <Text style={styles.dateText}>
+                <Text>
                   {form.dob ? form.dob.toDateString() : "Select Date"}
                 </Text>
               </TouchableOpacity>
@@ -176,29 +166,29 @@ export default function RegisterScreen({ navigation }: any) {
                 <DateTimePicker
                   value={form.dob || new Date(2000, 0, 1)}
                   mode="date"
-                  display={Platform.OS === "ios" ? "spinner" : "default"}
                   maximumDate={new Date()}
                   onChange={handleDateChange}
                 />
               )}
 
-              {/* Contact + Email */}
+              {/* Contact */}
               <TextInput
                 label="Primary Contact *"
                 mode="outlined"
                 style={styles.input}
-                keyboardType="phone-pad"
                 value={form.primaryContact}
                 onChangeText={(v) => handleChange("primaryContact", v)}
+                keyboardType="phone-pad"
               />
 
               <TextInput
                 label="Email *"
                 mode="outlined"
                 style={styles.input}
-                keyboardType="email-address"
                 value={form.email}
                 onChangeText={(v) => handleChange("email", v)}
+                autoCapitalize="none"
+                keyboardType="email-address"
               />
 
               {/* Password */}
@@ -206,44 +196,24 @@ export default function RegisterScreen({ navigation }: any) {
                 label="Password *"
                 mode="outlined"
                 secureTextEntry={!passwordVisible}
-                right={
-                  <TextInput.Icon
-                    icon={passwordVisible ? "eye-off" : "eye"}
-                    onPress={() => setPasswordVisible(!passwordVisible)}
-                  />
-                }
                 style={styles.input}
                 value={form.password}
                 onChangeText={(v) => handleChange("password", v)}
               />
 
-              {/* Confirm Password */}
               <TextInput
                 label="Confirm Password *"
                 mode="outlined"
                 secureTextEntry={!confirmPasswordVisible}
-                right={
-                  <TextInput.Icon
-                    icon={confirmPasswordVisible ? "eye-off" : "eye"}
-                    onPress={() =>
-                      setConfirmPasswordVisible(!confirmPasswordVisible)
-                    }
-                  />
-                }
                 style={styles.input}
                 value={form.confirmPassword}
                 onChangeText={(v) => handleChange("confirmPassword", v)}
               />
 
-              <HelperText type="info">
-                * Mandatory fields must be filled.
-              </HelperText>
-
               <Button
                 mode="contained"
-                style={styles.registerBtn}
-                buttonColor={PRIMARY}
                 onPress={handleRegister}
+                buttonColor={PRIMARY}
               >
                 Register
               </Button>
@@ -263,48 +233,26 @@ export default function RegisterScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F5F6FA" },
-  container: { padding: 18, paddingBottom: 60 },
-  card: {
-    borderRadius: 20,
-    paddingVertical: 10,
+  container: { padding: 20 },
+  card: { borderRadius: 18, padding: 10 },
+  input: { marginBottom: 12, backgroundColor: "#fff" },
+  label: { marginBottom: 8, marginTop: 10 },
+  genderRow: { flexDirection: "row", marginBottom: 10, gap: 8 },
+  genderChip: {},
+  genderChipActive: { backgroundColor: "#E3F2FD", borderColor: PRIMARY },
+  dateBtn: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: "#fff",
   },
-  label: { marginTop: 10, marginBottom: 6, fontWeight: "600", color: "#444" },
   section: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 10,
     color: PRIMARY,
-  },
-  input: { marginBottom: 12, backgroundColor: "#fff" },
-  genderRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
     marginBottom: 10,
   },
-  genderChip: { backgroundColor: "#fff" },
-  genderChipActive: { backgroundColor: "#E3F2FD", borderColor: PRIMARY },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: "#fff",
-  },
-  dropdownText: { fontSize: 15, color: "#555" },
-  dateBtn: {
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  dateText: { fontSize: 15, color: "#333" },
-  registerBtn: { marginTop: 15, paddingVertical: 8, borderRadius: 10 },
-  loginLink: {
-    textAlign: "center",
-    color: PRIMARY,
-    marginTop: 15,
-    fontWeight: "600",
-  },
+  loginLink: { textAlign: "center", marginTop: 15, color: PRIMARY },
 });

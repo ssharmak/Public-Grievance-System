@@ -1,19 +1,20 @@
 import express from "express";
-import { verifyToken } from "../middlewares/authMiddleware.js";
+import { verifyToken, isSuperAdmin } from "../middlewares/authMiddleware.js";
 import {
-  listCategories,
   createCategory,
+  getCategories,
+  updateCategory,
+  deleteCategory,
 } from "../controllers/categoryController.js";
-import { verifyRole } from "../middlewares/roleMiddleware.js";
 
 const router = express.Router();
 
-router.get("/", verifyToken, listCategories);
-router.post(
-  "/",
-  verifyToken,
-  verifyRole(["superadmin", "admin"]),
-  createCategory
-);
+// citizen/app
+router.get("/", getCategories);
+
+// superadmin
+router.post("/", verifyToken, isSuperAdmin, createCategory);
+router.patch("/:id", verifyToken, isSuperAdmin, updateCategory);
+router.delete("/:id", verifyToken, isSuperAdmin, deleteCategory);
 
 export default router;

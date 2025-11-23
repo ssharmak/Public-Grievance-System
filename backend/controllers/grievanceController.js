@@ -1,92 +1,79 @@
 import Grievance from "../models/Grievance.js";
+import User from "../models/User.js";
+import StatusHistory from "../models/StatusHistory.js";
+import Notification from "../models/Notification.js";
 
-// Generate unique grievance ID
+// Static category list
+const CATEGORIES = [
+  { key: "electricity", name: "Electricity & Power" },
+  { key: "water", name: "Water Supply" },
+  { key: "waste", name: "Waste Management" },
+  { key: "roads", name: "Roads & Infrastructure" },
+  { key: "transport", name: "Public Transport" },
+  { key: "safety", name: "Public Safety / Police" },
+  { key: "health", name: "Health & Sanitation" },
+  { key: "govt", name: "Government Services" },
+  { key: "housing", name: "Housing & Building" },
+  { key: "environment", name: "Environment" },
+  { key: "education", name: "Education" },
+  { key: "welfare", name: "Welfare & Social Justice" },
+  { key: "others", name: "Others" },
+];
+
 const generateGrievanceId = () =>
   "PGS-" +
   Date.now().toString(36).toUpperCase() +
   "-" +
   Math.random().toString(36).substring(2, 6).toUpperCase();
 
-// STATIC CATEGORY LIST (must match frontend)
-const VALID_CATEGORIES = [
-  "electricity",
-  "water",
-  "road",
-  "sanitation",
-  "waste",
-  "streetlights",
-  "drainage",
-  "public-transport",
-  "sewage",
-  "healthcare",
-  "public-safety",
-  "other",
-];
-
-// ✔ CREATE GRIEVANCE
 export const createGrievance = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { title, description, categoryId, priority, location, attachments } =
-      req.body;
+    const {
+      title,
+      description,
+      categoryId,
+      priority,
+      location,
+      attachments,
+      isAnonymous,
+    } = req.body;
 
-    // Validate category against allowed list
-    if (!VALID_CATEGORIES.includes(categoryId)) {
+    if (!title || !description || !categoryId) {
+      return res.status(400).json({
+        message: "Title, category and description are required",
+      });
+    }
+
+    // FIXED: using key instead of id
+    const category = CATEGORIES.find((c) => c.key === categoryId);
+    if (!category) {
       return res.status(400).json({ message: "Invalid category" });
     }
 
-    const newGrievance = await Grievance.create({
+    const userInfo = isAnonymous
+      ? null
+      : {
+          name: req.user.firstName + " " + req.user.lastName,
+          email: req.user.email,
+          primaryContact: req.user.primaryContact,
+        };
+
+    const g = await Grievance.create({
       grievanceId: generateGrievanceId(),
-      userId,
-      createdBy: {
-        name: req.user.name || "",
-        email: req.user.email || "",
-        primaryContact: req.user.primaryContact || "",
-      },
-      categoryId, // store string directly
+      userId: isAnonymous ? null : req.user.id,
+      createdBy: userInfo,
+      category,
       title,
       description,
       priority,
       location,
       attachments,
+      isAnonymous,
     });
 
-    res.status(201).json(newGrievance);
+    return res.status(201).json(g);
   } catch (err) {
     console.error("CREATE GRIEVANCE ERROR:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// ✔ GET USER'S OWN GRIEVANCES
-export const getMyGrievances = async (req, res) => {
-  try {
-    const list = await Grievance.find({ userId: req.user.id }).sort({
-      createdAt: -1,
-    });
-
-    res.json(list);
-  } catch (err) {
-    console.error("GET MY GRIEVANCES ERROR:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// ✔ GET SINGLE GRIEVANCE
-export const getSingleGrievance = async (req, res) => {
-  try {
-    const found = await Grievance.findOne({
-      grievanceId: req.params.id,
-      userId: req.user.id,
-    });
-
-    if (!found) {
-      return res.status(404).json({ message: "Grievance not found" });
-    }
-
-    res.json(found);
-  } catch (err) {
-    console.error("GET SINGLE GRIEVANCE ERROR:", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };

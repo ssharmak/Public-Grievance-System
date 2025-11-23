@@ -3,12 +3,14 @@ import cors from "cors";
 import dotenv from "dotenv";
 import routes from "./routes/index.js";
 import { connectDB } from "./config/db.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
 
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/api/categories", categoryRoutes);
 
 // Route mount
 app.use("/api", routes);

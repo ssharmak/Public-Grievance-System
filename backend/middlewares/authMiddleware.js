@@ -1,21 +1,29 @@
 import jwt from "jsonwebtoken";
 
 export const verifyToken = (req, res, next) => {
-  const header = req.headers.authorization || req.headers.Authorization;
-  if (!header)
+  const header = req.headers.authorization;
+  if (!header) {
     return res.status(401).json({ message: "No token, authorization denied" });
+  }
 
-  // Accept "Bearer <token>" or raw token
-  const token = (
-    header.startsWith("Bearer ") ? header.slice(7) : header
-  ).trim();
+  const token = header.replace("Bearer ", "").trim();
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // expects { id, role }
-    return next();
+    req.user = decoded; // { id, role }
+    next();
   } catch (err) {
-    console.log("JWT VERIFY ERROR:", err.message);
     return res.status(401).json({ message: "Token invalid or expired" });
   }
+};
+
+export const isAdmin = (req, res, next) => {
+  if (req.user?.role === "admin" || req.user?.role === "superadmin")
+    return next();
+  return res.status(403).json({ message: "Admin access required" });
+};
+
+export const isSuperAdmin = (req, res, next) => {
+  if (req.user?.role === "superadmin") return next();
+  return res.status(403).json({ message: "Superadmin access required" });
 };
