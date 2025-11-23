@@ -5,19 +5,19 @@ import Category from "./models/Category.js";
 dotenv.config();
 
 const categories = [
-  { name: "Electricity & Power" },
-  { name: "Water Supply" },
-  { name: "Waste Management" },
-  { name: "Roads & Infrastructure" },
-  { name: "Public Transport" },
-  { name: "Public Safety / Police" },
-  { name: "Health & Sanitation" },
-  { name: "Government Services" },
-  { name: "Housing & Building" },
-  { name: "Environment" },
-  { name: "Education" },
-  { name: "Welfare & Social Justice" },
-  { name: "Others" },
+  { name: "Electricity & Power", key: "electricity" },
+  { name: "Water Supply", key: "water" },
+  { name: "Waste Management", key: "waste" },
+  { name: "Roads & Infrastructure", key: "roads" },
+  { name: "Public Transport", key: "transport" },
+  { name: "Public Safety / Police", key: "safety" },
+  { name: "Health & Sanitation", key: "health" },
+  { name: "Government Services", key: "govt" },
+  { name: "Housing & Building", key: "housing" },
+  { name: "Environment", key: "environment" },
+  { name: "Education", key: "education" },
+  { name: "Welfare & Social Justice", key: "welfare" },
+  { name: "Others", key: "others" },
 ];
 
 (async () => {

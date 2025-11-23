@@ -81,7 +81,12 @@ export default function GrievanceHistoryScreen({ navigation }: any) {
                 >
                   <Card mode="elevated" style={styles.card}>
                     <Card.Content>
-                      <Text style={styles.title}>{item.title}</Text>
+                      <View style={styles.row}>
+                        <Text style={styles.title}>{item.title}</Text>
+                        <Text style={styles.category}>
+                          {item.category?.name}
+                        </Text>
+                      </View>
                       <Text style={styles.grievanceId}>
                         ID: {item.grievanceId}
                       </Text>
@@ -132,6 +137,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#222",
     marginBottom: 4,
+    flex: 1,
+  },
+
+  category: {
+    fontSize: 12,
+    color: "#1E88E5",
+    fontWeight: "600",
+    marginLeft: 8,
   },
 
   grievanceId: {

@@ -15,6 +15,22 @@ export default function Dashboard() {
 
       <Typography mt={2}>Welcome Admin!</Typography>
 
+      <Button
+        variant="contained"
+        sx={{ mt: 3, mr: 2 }}
+        onClick={() => (window.location.href = "/grievances")}
+      >
+        Manage Grievances
+      </Button>
+
+      <Button
+        variant="contained"
+        sx={{ mt: 3, mr: 2 }}
+        onClick={() => (window.location.href = "/categories")}
+      >
+        Manage Categories
+      </Button>
+
       <Button variant="outlined" sx={{ mt: 3 }} onClick={logout}>
         Logout
       </Button>

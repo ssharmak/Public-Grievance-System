@@ -1,12 +1,11 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
-  Animated,
-  TouchableOpacity,
   Alert,
-  Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import {
   Text,
@@ -15,48 +14,44 @@ import {
   Button,
   IconButton,
   Divider,
+  Appbar,
+  Switch,
+  ActivityIndicator,
 } from "react-native-paper";
 import { Picker } from "@react-native-picker/picker";
 import * as DocumentPicker from "expo-document-picker";
-import { submitGrievance } from "../services/grievanceService";
+import { submitGrievance, getCategories } from "../services/grievanceService";
 
 const PRIMARY = "#1E88E5";
 
-// ⭐ Static categories (NO DB required)
-const CATEGORIES = [
-  { id: "electricity", name: "Electricity & Power" },
-  { id: "water", name: "Water Supply" },
-  { id: "waste", name: "Waste Management" },
-  { id: "roads", name: "Roads & Infrastructure" },
-  { id: "transport", name: "Public Transport" },
-  { id: "safety", name: "Public Safety / Police" },
-  { id: "health", name: "Health & Sanitation" },
-  { id: "govt", name: "Government Services" },
-  { id: "housing", name: "Housing & Building" },
-  { id: "environment", name: "Environment" },
-  { id: "education", name: "Education" },
-  { id: "welfare", name: "Welfare & Social Justice" },
-  { id: "others", name: "Others" },
-];
-
 export default function SubmitGrievanceScreen({ navigation }: any) {
   const [title, setTitle] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [categories, setCategories] = useState<any[]>([]);
   const [priority, setPriority] = useState<"Low" | "Medium" | "High">("Medium");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [attachments, setAttachments] = useState<any[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [catsLoading, setCatsLoading] = useState(false);
 
-  const headerAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.timing(headerAnim, {
-      toValue: 1,
-      duration: 700,
-      useNativeDriver: true,
-    }).start();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setCatsLoading(true);
+      const data = await getCategories();
+      setCategories(data);
+    } catch (err) {
+      console.log("Error fetching categories", err);
+      Alert.alert("Error", "Failed to load categories");
+    } finally {
+      setCatsLoading(false);
+    }
+  };
 
   const pickDocument = async () => {
     try {
@@ -77,10 +72,18 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
     setAttachments(attachments.filter((_, idx) => idx !== i));
 
   const validate = () => {
-    if (!title.trim()) return Alert.alert("Error", "Please enter title");
-    if (!description.trim())
-      return Alert.alert("Error", "Please enter description");
-    if (!categoryId) return Alert.alert("Error", "Please select a category");
+    if (!title.trim()) {
+      Alert.alert("Error", "Please enter title");
+      return false;
+    }
+    if (!description.trim()) {
+      Alert.alert("Error", "Please enter description");
+      return false;
+    }
+    if (!categoryId) {
+      Alert.alert("Error", "Please select a category");
+      return false;
+    }
     return true;
   };
 
@@ -90,15 +93,23 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
     try {
       setLoading(true);
 
-      await submitGrievance({
-        title,
-        description,
-        categoryId,
-        priority,
-        location,
-        attachments: attachments.map((a) => a.name),
-        isAnonymous,
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("description", description);
+      formData.append("categoryId", categoryId);
+      formData.append("priority", priority);
+      formData.append("location", location);
+      formData.append("isAnonymous", String(isAnonymous));
+
+      attachments.forEach((file, index) => {
+        formData.append("attachments", {
+          uri: file.uri,
+          name: file.name,
+          type: file.mimeType || "application/octet-stream",
+        } as any);
       });
+
+      await submitGrievance(formData);
 
       setLoading(false);
       Alert.alert("Success", "Grievance submitted!", [
@@ -116,138 +127,149 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
 
   return (
     <View style={styles.screen}>
-      {/* HEADER */}
-      <Animated.View style={styles.header}>
-        <Text style={styles.headerTitle}>New Grievance</Text>
-        <Text style={styles.headerSubtitle}>
-          Help us take action on issues that matter
-        </Text>
-      </Animated.View>
+      <Appbar.Header>
+        <Appbar.BackAction onPress={() => navigation.goBack()} />
+        <Appbar.Content title="New Grievance" />
+      </Appbar.Header>
 
-      {/* BODY */}
-      <ScrollView contentContainerStyle={styles.container}>
-        <Card style={styles.card}>
-          <Card.Content>
-            <Text style={styles.label}>Title</Text>
-            <TextInput
-              mode="outlined"
-              placeholder="Short and clear title"
-              value={title}
-              onChangeText={setTitle}
-              style={styles.input}
-            />
-
-            <Text style={styles.label}>Category</Text>
-            <View style={styles.pickerBox}>
-              <Picker
-                selectedValue={categoryId}
-                onValueChange={(v) => setCategoryId(v)}
-              >
-                <Picker.Item label="Select category" value={null} />
-                {CATEGORIES.map((c) => (
-                  <Picker.Item key={c.id} label={c.name} value={c.id} />
-                ))}
-              </Picker>
-            </View>
-
-            <Text style={styles.label}>Priority</Text>
-            <View style={styles.pickerBox}>
-              <Picker
-                selectedValue={priority}
-                onValueChange={(v) => setPriority(v)}
-              >
-                <Picker.Item label="Low" value="Low" />
-                <Picker.Item label="Medium" value="Medium" />
-                <Picker.Item label="High" value="High" />
-              </Picker>
-            </View>
-
-            <Text style={styles.label}>Location (optional)</Text>
-            <TextInput
-              mode="outlined"
-              placeholder="Nearby landmark"
-              value={location}
-              onChangeText={setLocation}
-              style={styles.input}
-            />
-
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              mode="outlined"
-              multiline
-              numberOfLines={5}
-              placeholder="Describe the issue"
-              value={description}
-              onChangeText={setDescription}
-              style={[styles.input, { textAlignVertical: "top" }]}
-            />
-
-            <View style={styles.anonRow}>
-              <Text style={styles.label}>Submit Anonymously</Text>
-              <Switch
-                value={isAnonymous}
-                onValueChange={setIsAnonymous}
-                thumbColor={isAnonymous ? PRIMARY : "#ccc"}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          <Card style={styles.card}>
+            <Card.Content>
+              <TextInput
+                mode="outlined"
+                label="Title"
+                placeholder="Short and clear title"
+                value={title}
+                onChangeText={setTitle}
+                style={styles.input}
               />
-            </View>
 
-            <Divider style={{ marginVertical: 12 }} />
+              <Text style={styles.label}>Category</Text>
+              <View style={styles.pickerBox}>
+                {catsLoading ? (
+                  <ActivityIndicator size="small" style={{ padding: 14 }} />
+                ) : (
+                  <Picker
+                    selectedValue={categoryId}
+                    onValueChange={(v) => setCategoryId(v)}
+                    mode="dropdown"
+                    style={{ backgroundColor: "#fff" }}
+                  >
+                    <Picker.Item label="Select category" value="" />
+                    {categories.map((c) => (
+                      <Picker.Item key={c._id} label={c.name} value={c._id} />
+                    ))}
+                  </Picker>
+                )}
+              </View>
 
-            <View style={styles.attachmentRow}>
-              <Text style={styles.label}>Attachments</Text>
-              <IconButton icon="paperclip" size={22} onPress={pickDocument} />
-            </View>
+              <Text style={styles.label}>Priority</Text>
+              <View style={styles.pickerBox}>
+                <Picker
+                  selectedValue={priority}
+                  onValueChange={(v) => setPriority(v)}
+                  mode="dropdown"
+                  style={{ backgroundColor: "#fff" }}
+                >
+                  <Picker.Item label="Low" value="Low" />
+                  <Picker.Item label="Medium" value="Medium" />
+                  <Picker.Item label="High" value="High" />
+                </Picker>
+              </View>
 
-            {attachments.map((a, i) => (
-              <View key={i} style={styles.attachmentItem}>
-                <Text style={{ flex: 1 }}>{a.name}</Text>
-                <IconButton
-                  icon="close"
-                  size={18}
-                  onPress={() => removeAttachment(i)}
+              <TextInput
+                mode="outlined"
+                label="Location (optional)"
+                placeholder="Nearby landmark"
+                value={location}
+                onChangeText={setLocation}
+                style={styles.input}
+              />
+
+              <TextInput
+                mode="outlined"
+                label="Description"
+                multiline
+                numberOfLines={5}
+                placeholder="Describe the issue"
+                value={description}
+                onChangeText={setDescription}
+                style={[styles.input, { textAlignVertical: "top" }]}
+              />
+
+              <View style={styles.anonRow}>
+                <Text style={styles.label}>Submit Anonymously</Text>
+                <Switch
+                  value={isAnonymous}
+                  onValueChange={setIsAnonymous}
+                  color={PRIMARY}
                 />
               </View>
-            ))}
 
-            <Button
-              mode="contained"
-              loading={loading}
-              style={styles.submitButton}
-              onPress={handleSubmit}
-            >
-              Submit
-            </Button>
-          </Card.Content>
-        </Card>
-      </ScrollView>
+              <Divider style={{ marginVertical: 12 }} />
+
+              <View style={styles.attachmentRow}>
+                <Text style={styles.label}>Attachments</Text>
+                <IconButton icon="paperclip" size={22} onPress={pickDocument} />
+              </View>
+
+              {attachments.map((a, i) => (
+                <View key={i} style={styles.attachmentItem}>
+                  <Text style={{ flex: 1 }} numberOfLines={1}>
+                    {a.name}
+                  </Text>
+                  <IconButton
+                    icon="close"
+                    size={18}
+                    onPress={() => removeAttachment(i)}
+                  />
+                </View>
+              ))}
+
+              <Button
+                mode="contained"
+                loading={loading}
+                style={styles.submitButton}
+                onPress={handleSubmit}
+                buttonColor={PRIMARY}
+              >
+                Submit Grievance
+              </Button>
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F6F9FF" },
-  header: {
-    backgroundColor: PRIMARY,
-    padding: 25,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  screen: { flex: 1, backgroundColor: "#F5F6FA" },
+  container: { padding: 16, paddingBottom: 40 },
+  card: { borderRadius: 16, backgroundColor: "#fff" },
+  label: {
+    fontWeight: "600",
+    marginBottom: 6,
+    marginTop: 10,
+    color: "#444",
+    fontSize: 14,
   },
-  headerTitle: { color: "#fff", fontSize: 22, fontWeight: "900" },
-  headerSubtitle: { color: "#CFE6FF", marginTop: 5 },
-  container: { padding: 20 },
-  card: { borderRadius: 18 },
-  label: { fontWeight: "700", marginBottom: 4, color: "#333" },
   input: { marginBottom: 12, backgroundColor: "#fff" },
   pickerBox: {
     borderWidth: 1,
-    borderColor: "#D0D8E5",
-    borderRadius: 10,
+    borderColor: "#79747E",
+    borderRadius: 4,
     backgroundColor: "#fff",
     marginBottom: 12,
   },
   anonRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     marginVertical: 10,
   },
   attachmentRow: {
@@ -256,16 +278,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   attachmentItem: {
-    backgroundColor: "#fff",
-    borderRadius: 10,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 8,
     padding: 8,
     marginTop: 6,
     flexDirection: "row",
     alignItems: "center",
   },
   submitButton: {
-    backgroundColor: PRIMARY,
-    marginTop: 20,
-    borderRadius: 10,
+    marginTop: 24,
+    borderRadius: 8,
+    paddingVertical: 6,
   },
 });

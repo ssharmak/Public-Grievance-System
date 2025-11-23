@@ -12,7 +12,6 @@ import {
   Text,
   TextInput,
   Button,
-  HelperText,
   Appbar,
   Card,
   Chip,
@@ -26,6 +25,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
     firstName: "",
@@ -70,26 +70,31 @@ export default function RegisterScreen({ navigation }: any) {
     }
 
     try {
+      setLoading(true);
       const payload = {
         ...form,
         dob: form.dob?.toISOString(),
       };
 
-      console.log("REGISTER SENDING:", payload);
-
       const res = await register(payload);
-      console.log("REGISTER RESPONSE:", res);
 
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Home" }],
-      });
+      if (res.token) {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: "Home" }],
+        });
+      } else {
+        Alert.alert("Success", "Registration successful! Please login.");
+        navigation.navigate("Login");
+      }
     } catch (err: any) {
       console.log(err.response?.data || err);
       Alert.alert(
         "Registration Failed",
         err?.response?.data?.message || "Something went wrong"
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -97,7 +102,7 @@ export default function RegisterScreen({ navigation }: any) {
     <View style={styles.screen}>
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Register" />
+        <Appbar.Content title="Create Account" />
       </Appbar.Header>
 
       <KeyboardAvoidingView
@@ -145,8 +150,12 @@ export default function RegisterScreen({ navigation }: any) {
                       styles.genderChip,
                       form.gender === g && styles.genderChipActive,
                     ]}
+                    textStyle={{
+                      color: form.gender === g ? PRIMARY : "#666",
+                      fontWeight: form.gender === g ? "bold" : "normal",
+                    }}
                   >
-                    {g}
+                    {g.charAt(0).toUpperCase() + g.slice(1)}
                   </Chip>
                 ))}
               </View>
@@ -157,9 +166,10 @@ export default function RegisterScreen({ navigation }: any) {
                 onPress={() => setShowDatePicker(true)}
                 style={styles.dateBtn}
               >
-                <Text>
+                <Text style={{ color: form.dob ? "#000" : "#666" }}>
                   {form.dob ? form.dob.toDateString() : "Select Date"}
                 </Text>
+                <TextInput.Icon icon="calendar" />
               </TouchableOpacity>
 
               {showDatePicker && (
@@ -171,7 +181,10 @@ export default function RegisterScreen({ navigation }: any) {
                 />
               )}
 
-              {/* Contact */}
+              <Text style={[styles.section, { marginTop: 20 }]}>
+                Account Details
+              </Text>
+
               <TextInput
                 label="Primary Contact *"
                 mode="outlined"
@@ -179,6 +192,7 @@ export default function RegisterScreen({ navigation }: any) {
                 value={form.primaryContact}
                 onChangeText={(v) => handleChange("primaryContact", v)}
                 keyboardType="phone-pad"
+                left={<TextInput.Icon icon="phone" />}
               />
 
               <TextInput
@@ -189,9 +203,9 @@ export default function RegisterScreen({ navigation }: any) {
                 onChangeText={(v) => handleChange("email", v)}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                left={<TextInput.Icon icon="email" />}
               />
 
-              {/* Password */}
               <TextInput
                 label="Password *"
                 mode="outlined"
@@ -199,6 +213,13 @@ export default function RegisterScreen({ navigation }: any) {
                 style={styles.input}
                 value={form.password}
                 onChangeText={(v) => handleChange("password", v)}
+                right={
+                  <TextInput.Icon
+                    icon={passwordVisible ? "eye-off" : "eye"}
+                    onPress={() => setPasswordVisible(!passwordVisible)}
+                  />
+                }
+                left={<TextInput.Icon icon="lock" />}
               />
 
               <TextInput
@@ -208,21 +229,34 @@ export default function RegisterScreen({ navigation }: any) {
                 style={styles.input}
                 value={form.confirmPassword}
                 onChangeText={(v) => handleChange("confirmPassword", v)}
+                right={
+                  <TextInput.Icon
+                    icon={confirmPasswordVisible ? "eye-off" : "eye"}
+                    onPress={() =>
+                      setConfirmPasswordVisible(!confirmPasswordVisible)
+                    }
+                  />
+                }
+                left={<TextInput.Icon icon="lock-check" />}
               />
 
               <Button
                 mode="contained"
                 onPress={handleRegister}
                 buttonColor={PRIMARY}
+                loading={loading}
+                style={styles.registerBtn}
+                contentStyle={{ height: 48 }}
               >
                 Register
               </Button>
 
-              <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-                <Text style={styles.loginLink}>
-                  Already have an account? Login
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.footer}>
+                <Text style={{ color: "#666" }}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+                  <Text style={styles.loginLink}>Login</Text>
+                </TouchableOpacity>
+              </View>
             </Card.Content>
           </Card>
         </ScrollView>
@@ -233,26 +267,39 @@ export default function RegisterScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F5F6FA" },
-  container: { padding: 20 },
-  card: { borderRadius: 18, padding: 10 },
+  container: { padding: 16, paddingBottom: 40 },
+  card: { borderRadius: 16, paddingVertical: 8 },
   input: { marginBottom: 12, backgroundColor: "#fff" },
-  label: { marginBottom: 8, marginTop: 10 },
-  genderRow: { flexDirection: "row", marginBottom: 10, gap: 8 },
-  genderChip: {},
+  label: { marginBottom: 8, marginTop: 10, fontWeight: "600", color: "#444" },
+  genderRow: { flexDirection: "row", marginBottom: 10, gap: 8, flexWrap: "wrap" },
+  genderChip: { backgroundColor: "#fff", borderColor: "#ddd" },
   genderChipActive: { backgroundColor: "#E3F2FD", borderColor: PRIMARY },
   dateBtn: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 12,
-    borderRadius: 10,
+    borderColor: "#79747E",
+    padding: 14,
+    borderRadius: 4,
     marginBottom: 12,
     backgroundColor: "#fff",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   section: {
     fontSize: 18,
     fontWeight: "700",
     color: PRIMARY,
-    marginBottom: 10,
+    marginBottom: 16,
   },
-  loginLink: { textAlign: "center", marginTop: 15, color: PRIMARY },
+  registerBtn: {
+    marginTop: 20,
+    borderRadius: 8,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 20,
+    alignItems: "center",
+  },
+  loginLink: { color: PRIMARY, fontWeight: "bold" },
 });

@@ -1,24 +1,8 @@
 import Grievance from "../models/Grievance.js";
+import Category from "../models/Category.js";
 import User from "../models/User.js";
 import StatusHistory from "../models/StatusHistory.js";
 import Notification from "../models/Notification.js";
-
-// Static category list
-const CATEGORIES = [
-  { key: "electricity", name: "Electricity & Power" },
-  { key: "water", name: "Water Supply" },
-  { key: "waste", name: "Waste Management" },
-  { key: "roads", name: "Roads & Infrastructure" },
-  { key: "transport", name: "Public Transport" },
-  { key: "safety", name: "Public Safety / Police" },
-  { key: "health", name: "Health & Sanitation" },
-  { key: "govt", name: "Government Services" },
-  { key: "housing", name: "Housing & Building" },
-  { key: "environment", name: "Environment" },
-  { key: "education", name: "Education" },
-  { key: "welfare", name: "Welfare & Social Justice" },
-  { key: "others", name: "Others" },
-];
 
 const generateGrievanceId = () =>
   "PGS-" +
@@ -26,7 +10,105 @@ const generateGrievanceId = () =>
   "-" +
   Math.random().toString(36).substring(2, 6).toUpperCase();
 
+// helper: notify user in-app
+const notifyUser = async (userId, title, message, meta = {}) => {
+  if (!userId) return;
+  await Notification.create({ userId, title, message, meta, type: "inapp" });
+};
+
+// Citizen – create grievance (logged-in)
 export const createGrievance = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      title,
+      description,
+      categoryId,
+      priority,
+      location,
+    } = req.body;
+
+    let isAnonymous = req.body.isAnonymous;
+    if (isAnonymous === "true") isAnonymous = true;
+    else if (isAnonymous === "false") isAnonymous = false;
+    else isAnonymous = !!isAnonymous;
+
+    console.log("📝 CREATE GRIEVANCE - isAnonymous:", isAnonymous, "type:", typeof isAnonymous);
+    console.log("📝 CREATE GRIEVANCE - userId:", userId);
+
+    // Handle file uploads
+    let attachmentPaths = [];
+    if (req.files && req.files.length > 0) {
+      attachmentPaths = req.files.map((f) => `/uploads/${f.filename}`);
+    }
+
+    if (!title || !description || !categoryId) {
+      return res
+        .status(400)
+        .json({ message: "title, description and categoryId are required" });
+    }
+
+    const category = await Category.findById(categoryId);
+    if (!category) return res.status(400).json({ message: "Invalid category" });
+
+    const user = await User.findById(userId);
+
+    const createdBy = isAnonymous
+      ? { name: "Anonymous", email: "", primaryContact: "" }
+      : {
+          name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+          email: user?.email || "",
+          primaryContact: user?.primaryContact || "",
+        };
+
+    const grievanceData = {
+      grievanceId: generateGrievanceId(),
+      userId: isAnonymous ? null : userId,
+      createdBy,
+      category: category._id,
+      title,
+      description,
+      priority,
+      location,
+      attachments: attachmentPaths,
+      isAnonymous,
+    };
+
+    console.log("📝 Grievance Data to create:", {
+      ...grievanceData,
+      userId: grievanceData.userId,
+      isAnonymous: grievanceData.isAnonymous,
+    });
+
+    const g = await Grievance.create(grievanceData);
+
+    console.log("✅ Grievance created:", {
+      _id: g._id,
+      grievanceId: g.grievanceId,
+      userId: g.userId,
+      isAnonymous: g.isAnonymous,
+      status: g.status,
+    });
+
+    // notify user (if not anonymous)
+    if (!isAnonymous && userId) {
+      await notifyUser(
+        userId,
+        "Grievance Submitted",
+        `Your grievance ${g.grievanceId} has been submitted.`,
+        { grievanceId: g.grievanceId }
+      );
+    }
+
+    res.status(201).json(g);
+  } catch (err) {
+    console.error("CREATE GRIEVANCE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Anonymous – no auth
+export const createAnonymousGrievance = async (req, res) => {
   try {
     const {
       title,
@@ -34,46 +116,205 @@ export const createGrievance = async (req, res) => {
       categoryId,
       priority,
       location,
-      attachments,
-      isAnonymous,
+      attachments = [],
     } = req.body;
 
     if (!title || !description || !categoryId) {
-      return res.status(400).json({
-        message: "Title, category and description are required",
-      });
+      return res
+        .status(400)
+        .json({ message: "title, description and categoryId are required" });
     }
 
-    // FIXED: using key instead of id
-    const category = CATEGORIES.find((c) => c.key === categoryId);
-    if (!category) {
-      return res.status(400).json({ message: "Invalid category" });
-    }
-
-    const userInfo = isAnonymous
-      ? null
-      : {
-          name: req.user.firstName + " " + req.user.lastName,
-          email: req.user.email,
-          primaryContact: req.user.primaryContact,
-        };
+    const category = await Category.findById(categoryId);
+    if (!category) return res.status(400).json({ message: "Invalid category" });
 
     const g = await Grievance.create({
       grievanceId: generateGrievanceId(),
-      userId: isAnonymous ? null : req.user.id,
-      createdBy: userInfo,
-      category,
+      userId: null,
+      createdBy: {
+        name: "Anonymous",
+      },
+      category: category._id,
       title,
       description,
       priority,
       location,
       attachments,
-      isAnonymous,
+      isAnonymous: true,
     });
 
-    return res.status(201).json(g);
+    res.status(201).json(g);
   } catch (err) {
-    console.error("CREATE GRIEVANCE ERROR:", err);
-    return res.status(500).json({ message: "Server error" });
+    console.error("CREATE ANON GRIEVANCE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Citizen – own grievances
+export const getMyGrievances = async (req, res) => {
+  try {
+    console.log("🔍 GET MY GRIEVANCES - userId:", req.user.id);
+    
+    const list = await Grievance.find({ userId: req.user.id })
+      .populate("category", "name key")
+      .sort({ createdAt: -1 });
+    
+    console.log("🔍 Found grievances:", list.length);
+    if (list.length > 0) {
+      console.log("🔍 First grievance:", {
+        _id: list[0]._id,
+        grievanceId: list[0].grievanceId,
+        userId: list[0].userId,
+        status: list[0].status,
+      });
+    }
+    
+    res.json(list);
+  } catch (err) {
+    console.error("GET MY GRIEVANCES ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Citizen – single grievance by grievanceId
+export const getSingleGrievance = async (req, res) => {
+  try {
+    const found = await Grievance.findOne({
+      grievanceId: req.params.id,
+      userId: req.user.id,
+    }).populate("category", "name key");
+
+    if (!found) {
+      return res.status(404).json({ message: "Grievance not found" });
+    }
+
+    res.json(found);
+  } catch (err) {
+    console.error("GET SINGLE GRIEVANCE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Admin – list all
+export const adminGetAll = async (req, res) => {
+  try {
+    const list = await Grievance.find()
+      .populate("category", "name key")
+      .populate("assignedTo", "firstName lastName email")
+      .sort({ createdAt: -1 });
+
+    const mapped = list.map((g) => ({
+      ...g.toObject(),
+      categoryName: g.category?.name || "Uncategorized",
+      assignedName: g.assignedTo
+        ? `${g.assignedTo.firstName} ${g.assignedTo.lastName}`
+        : "Unassigned",
+    }));
+
+    res.json(mapped);
+  } catch (err) {
+    console.error("ADMIN GET ALL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Admin – get grievance by grievanceId
+export const adminGetOne = async (req, res) => {
+  try {
+    const g = await Grievance.findOne({ grievanceId: req.params.id })
+      .populate("category", "name key")
+      .populate("assignedTo", "firstName lastName email")
+      .populate("department", "name key");
+
+    if (!g) return res.status(404).json({ message: "Grievance not found" });
+
+    const history = await StatusHistory.find({ grievance: g._id })
+      .populate("changedBy", "firstName lastName email")
+      .sort({ createdAt: -1 });
+
+    res.json({ grievance: g, history });
+  } catch (err) {
+    console.error("ADMIN GET ONE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Admin – update status
+export const updateStatus = async (req, res) => {
+  try {
+    const { status, note } = req.body;
+    const g = await Grievance.findOne({ grievanceId: req.params.id });
+    if (!g) return res.status(404).json({ message: "Grievance not found" });
+
+    const oldStatus = g.status;
+    g.status = status;
+    await g.save();
+
+    await StatusHistory.create({
+      grievance: g._id,
+      oldStatus,
+      newStatus: status,
+      changedBy: req.user.id,
+      note,
+    });
+
+    if (g.userId) {
+      await notifyUser(
+        g.userId,
+        "Grievance Status Updated",
+        `Your grievance ${g.grievanceId} status changed from ${oldStatus} to ${status}.`,
+        { grievanceId: g.grievanceId }
+      );
+    }
+
+    res.json(g);
+  } catch (err) {
+    console.error("UPDATE STATUS ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Admin – assign to staff
+export const assignGrievance = async (req, res) => {
+  try {
+    const { assignedTo } = req.body;
+    const g = await Grievance.findOne({ grievanceId: req.params.id });
+    if (!g) return res.status(404).json({ message: "Grievance not found" });
+
+    g.assignedTo = assignedTo;
+    g.status = "Assigned";
+    await g.save();
+
+    await StatusHistory.create({
+      grievance: g._id,
+      oldStatus: "Submitted",
+      newStatus: "Assigned",
+      changedBy: req.user.id,
+      note: "Assigned to staff",
+    });
+
+    res.json(g);
+  } catch (err) {
+    console.error("ASSIGN ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Attachments (citizen)
+export const addAttachments = async (req, res) => {
+  try {
+    const files = req.files || [];
+    const filePaths = files.map((f) => `/uploads/${f.filename}`);
+
+    const updated = await Grievance.findOneAndUpdate(
+      { grievanceId: req.params.id, userId: req.user.id },
+      { $push: { attachments: { $each: filePaths } } },
+      { new: true }
+    );
+
+    res.json(updated);
+  } catch (err) {
+    console.error("ATTACHMENTS ERROR:", err);
+    res.status(500).json({ message: "Attachment upload failed" });
   }
 };

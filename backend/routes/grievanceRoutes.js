@@ -10,10 +10,12 @@ import {
 } from "../controllers/grievanceController.js";
 import { verifyToken, isAdmin } from "../middlewares/authMiddleware.js";
 
+import upload from "../middlewares/uploadMiddleware.js";
+
 const router = express.Router();
 
 // Citizen Routes
-router.post("/", verifyToken, createGrievance);
+router.post("/", verifyToken, upload.array("attachments", 5), createGrievance);
 router.get("/me", verifyToken, getMyGrievances);
 router.get("/:id", verifyToken, getSingleGrievance);
 

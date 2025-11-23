@@ -1,19 +1,25 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
 } from "react-native";
+import { Text, TextInput, Button, Card } from "react-native-paper";
 import { login } from "../services/authService";
+import { registerForPushNotificationsAsync } from "../utils/pushNotifications";
+import { registerPushToken } from "../services/notificationService";
+
+const PRIMARY = "#1E88E5";
 
 export default function LoginScreen({ navigation }: any) {
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [secureText, setSecureText] = useState(true);
 
   const handleLogin = async () => {
     if (!emailOrPhone.trim() || !password) {
@@ -25,10 +31,19 @@ export default function LoginScreen({ navigation }: any) {
       setLoading(true);
       const res = await login({ emailOrPhone: emailOrPhone.trim(), password });
 
-      console.log("LOGIN SUCCESS:", res);
-
-      // navigate to Home (reset stack)
       if (res.token) {
+        // Register for push notifications after successful login
+        try {
+          const pushToken = await registerForPushNotificationsAsync();
+          if (pushToken) {
+            await registerPushToken(pushToken);
+            console.log("✅ Push token registered successfully");
+          }
+        } catch (pushError) {
+          console.warn("Push notification registration failed:", pushError);
+          // Don't block login flow if push notification fails
+        }
+
         navigation.reset({
           index: 0,
           routes: [{ name: "Home" }],
@@ -50,69 +65,88 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-
-      <TextInput
-        placeholder="Email or Phone"
-        style={styles.input}
-        value={emailOrPhone}
-        onChangeText={setEmailOrPhone}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      <TextInput
-        placeholder="Password"
-        secureTextEntry
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      <TouchableOpacity
-        style={styles.button}
-        onPress={handleLogin}
-        disabled={loading}
+    <View style={styles.screen}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.container}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Login</Text>
-        )}
-      </TouchableOpacity>
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerTitle}>Welcome Back</Text>
+          <Text style={styles.headerSubtitle}>Sign in to continue</Text>
+        </View>
 
-      <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-        <Text style={styles.link}>Don't have an account? Register</Text>
-      </TouchableOpacity>
+        <Card style={styles.card} mode="elevated">
+          <Card.Content>
+            <TextInput
+              label="Email or Phone"
+              mode="outlined"
+              style={styles.input}
+              value={emailOrPhone}
+              onChangeText={setEmailOrPhone}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              left={<TextInput.Icon icon="account" />}
+            />
+
+            <TextInput
+              label="Password"
+              mode="outlined"
+              secureTextEntry={secureText}
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              right={
+                <TextInput.Icon
+                  icon={secureText ? "eye" : "eye-off"}
+                  onPress={() => setSecureText(!secureText)}
+                />
+              }
+              left={<TextInput.Icon icon="lock" />}
+            />
+
+            <Button
+              mode="contained"
+              onPress={handleLogin}
+              loading={loading}
+              contentStyle={{ height: 50 }}
+              style={styles.button}
+              buttonColor={PRIMARY}
+            >
+              Login
+            </Button>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+                <Text style={styles.link}>Register</Text>
+              </TouchableOpacity>
+            </View>
+          </Card.Content>
+        </Card>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: "center" },
-  title: {
-    fontSize: 26,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 20,
+  screen: { flex: 1, backgroundColor: "#F5F6FA", justifyContent: "center" },
+  container: { padding: 20, justifyContent: "center" },
+  headerContainer: { marginBottom: 30, alignItems: "center" },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 8,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 15,
-    backgroundColor: "#fff",
-  },
-  button: {
-    backgroundColor: "#1E88E5",
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 15,
-    alignItems: "center",
+  headerSubtitle: { fontSize: 16, color: "#666" },
+  card: { borderRadius: 20, paddingVertical: 10 },
+  input: { marginBottom: 16, backgroundColor: "#fff" },
+  button: { borderRadius: 10, marginTop: 10 },
+  footer: {
+    flexDirection: "row",
     justifyContent: "center",
+    marginTop: 20,
   },
-  buttonText: { color: "#fff", textAlign: "center", fontSize: 16 },
-  link: { color: "#1E88E5", textAlign: "center" },
+  footerText: { color: "#666" },
+  link: { color: PRIMARY, fontWeight: "bold" },
 });

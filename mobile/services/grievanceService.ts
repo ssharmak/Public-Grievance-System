@@ -1,16 +1,25 @@
 import api from "./api";
 
-export const submitGrievance = async (payload: any) => {
-  const res = await api.post("/grievances", payload);
+export const submitGrievance = async (formData: FormData) => {
+  const res = await api.post("/grievances", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return res.data;
 };
 
 export const getMyGrievances = async () => {
-  const res = await api.get("/grievances/my"); 
+  const res = await api.get("/grievances/me");
   return res.data;
 };
 
 export const getGrievance = async (grievanceId: string) => {
-  const res = await api.get(`/grievances/${grievanceId}`);  
+  const res = await api.get(`/grievances/${grievanceId}`);
+  return res.data;
+};
+
+export const getCategories = async () => {
+  const res = await api.get("/categories");
   return res.data;
 };

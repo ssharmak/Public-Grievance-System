@@ -63,13 +63,21 @@ export default function TrackGrievancesScreen({ navigation }: any) {
         </View>
       ) : (
         <>
-          {items.length === 0 ? (
+          {items.filter((i) =>
+            ["Submitted", "In Review", "Assigned", "In Progress"].includes(
+              i.status
+            )
+          ).length === 0 ? (
             <View style={styles.center}>
-              <Text style={{ opacity: 0.7 }}>No grievances found</Text>
+              <Text style={{ opacity: 0.7 }}>No active grievances to track</Text>
             </View>
           ) : (
             <FlatList
-              data={items}
+              data={items.filter((i) =>
+                ["Submitted", "In Review", "Assigned", "In Progress"].includes(
+                  i.status
+                )
+              )}
               contentContainerStyle={{ padding: 16 }}
               keyExtractor={(item) => item._id}
               renderItem={({ item }) => (
@@ -83,7 +91,12 @@ export default function TrackGrievancesScreen({ navigation }: any) {
                 >
                   <Card mode="elevated" style={styles.card}>
                     <Card.Content>
-                      <Text style={styles.title}>{item.title}</Text>
+                      <View style={styles.row}>
+                        <Text style={styles.title}>{item.title}</Text>
+                        <Text style={styles.category}>
+                          {item.category?.name}
+                        </Text>
+                      </View>
                       <Text style={styles.grievanceId}>
                         ID: {item.grievanceId}
                       </Text>
@@ -134,6 +147,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#222",
     marginBottom: 4,
+    flex: 1,
+  },
+
+  category: {
+    fontSize: 12,
+    color: "#1E88E5",
+    fontWeight: "600",
+    marginLeft: 8,
   },
 
   grievanceId: {

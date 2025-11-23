@@ -28,17 +28,20 @@ export default function Categories() {
 
   const addCategory = async () => {
     if (!name.trim()) return alert("Enter category name");
+    
+    const key = name.toLowerCase().replace(/\s+/g, "-");
+
     try {
       const token = localStorage.getItem("admin_token");
       await axios.post(
         "http://localhost:5000/api/categories",
-        { name },
+        { name, key, description: "Created via Admin Panel" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setName("");
       loadCategories();
-    } catch (err) {
-      alert("Failed to create category");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Failed to create category");
     }
   };
 

@@ -1,81 +1,93 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
-import { Appbar, Button, Text, Card } from "react-native-paper";
+import { View, StyleSheet, Image } from "react-native";
+import { Button, Text } from "react-native-paper";
+
+const PRIMARY = "#1E88E5";
 
 export default function WelcomeScreen({ navigation }: any) {
   return (
-    <View style={styles.main}>
-      {/* Header */}
-      <Appbar.Header>
-        <Appbar.Content title="Public Grievance System" />
-        <Button mode="text" onPress={() => navigation.navigate("Login")}>
-          Login
-        </Button>
-        <Button mode="text" onPress={() => navigation.navigate("Register")}>
-          Register
-        </Button>
-      </Appbar.Header>
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <Image
+          source={{
+            uri: "https://cdn-icons-png.flaticon.com/512/921/921347.png",
+          }}
+          style={styles.logo}
+        />
 
-      {/* Info Section */}
-      <View style={styles.container}>
-        <Card style={styles.card} elevation={4}>
-          <Card.Content>
-            <Text style={styles.title}>Why Public Grievance System?</Text>
+        <Text style={styles.title}>Public Grievance System</Text>
+        <Text style={styles.subtitle}>
+          Empowering citizens to voice their concerns and ensuring efficient
+          resolution by the government.
+        </Text>
 
-            <Text style={styles.text}>
-              This system allows people to submit problems, complaints, and
-              suggestions directly to government departments.
-            </Text>
+        <View style={styles.buttonContainer}>
+          <Button
+            mode="contained"
+            style={styles.button}
+            contentStyle={{ height: 50 }}
+            buttonColor={PRIMARY}
+            onPress={() => navigation.navigate("Login")}
+          >
+            Login
+          </Button>
 
-            <Text style={styles.text}>
-              It improves transparency, speeds up resolutions, and ensures
-              proper monitoring of public issues.
-            </Text>
-
-            <Text style={styles.text}>
-              It helps in building better governance by identifying public needs
-              and resolving them efficiently.
-            </Text>
-
-            <Button
-              mode="contained"
-              style={styles.exploreBtn}
-              onPress={() => navigation.navigate("Landing")}
-            >
-              Explore Features
-            </Button>
-          </Card.Content>
-        </Card>
+          <Button
+            mode="outlined"
+            style={[styles.button, styles.outlineBtn]}
+            contentStyle={{ height: 50 }}
+            textColor={PRIMARY}
+            onPress={() => navigation.navigate("Register")}
+          >
+            Create Account
+          </Button>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  main: { flex: 1 },
   container: {
     flex: 1,
+    backgroundColor: "#fff",
     justifyContent: "center",
-    padding: 20,
+    padding: 24,
   },
-  card: {
-    padding: 20,
-    borderRadius: 16,
+  content: {
+    alignItems: "center",
+  },
+  logo: {
+    width: 150,
+    height: 150,
+    marginBottom: 32,
+    resizeMode: "contain",
   },
   title: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
     marginBottom: 12,
   },
-  text: {
+  subtitle: {
     fontSize: 16,
-    marginBottom: 10,
-    color: "#555",
-    lineHeight: 22,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 48,
+    paddingHorizontal: 10,
   },
-  exploreBtn: {
-    marginTop: 20,
-    paddingVertical: 6,
-    borderRadius: 8,
+  buttonContainer: {
+    width: "100%",
+    gap: 16,
+  },
+  button: {
+    borderRadius: 12,
+    width: "100%",
+  },
+  outlineBtn: {
+    borderColor: PRIMARY,
+    borderWidth: 2,
   },
 });

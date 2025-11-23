@@ -18,8 +18,9 @@ const grievanceSchema = new mongoose.Schema(
 
     // 👉 No more ObjectId references for category
     category: {
-      key: { type: String, required: true }, // ex: "electricity"
-      name: { type: String, required: true }, // ex: "Electricity & Power"
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
     },
 
     title: { type: String, required: true },
