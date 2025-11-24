@@ -107,10 +107,35 @@ export const login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        managedCategories: user.managedCategories,
       },
     });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    // Placeholder logic
+    console.log(`Forgot password requested for: ${email}`);
+    res.json({ message: "If that email exists, a reset link has been sent." });
+  } catch (err) {
+    console.error("FORGOT PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    // Placeholder logic
+    console.log(`Reset password with token: ${token}`);
+    res.json({ message: "Password has been reset successfully." });
+  } catch (err) {
+    console.error("RESET PASSWORD ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

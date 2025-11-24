@@ -1,112 +1,36 @@
-import Notification from "../models/Notification.js";
-import User from "../models/User.js";
-import { getEmailTransporter } from "../config/emailConfig.js";
-import { emailTemplates } from "./emailTemplates.js";
+import { sendEmail } from './emailService.js';
+import User from '../models/User.js';
 
-/**
- * Send email notification
- */
-const sendEmailNotification = async (user, title, message, templateData = {}) => {
-  try {
-    const transporter = getEmailTransporter();
-    
-    if (!transporter) {
-      console.warn("Email transporter not configured");
-      return false;
-    }
-
-    if (!user.email) {
-      console.warn(`No email address for user ${user._id}`);
-      return false;
-    }
-
-    // Determine which template to use based on templateData
-    let emailContent;
-    if (templateData.type === "grievanceSubmitted") {
-      emailContent = emailTemplates.grievanceSubmitted({
-        userName: `${user.firstName} ${user.lastName}`,
-        ...templateData,
-      });
-    } else if (templateData.type === "statusUpdate") {
-      emailContent = emailTemplates.statusUpdate({
-        userName: `${user.firstName} ${user.lastName}`,
-        ...templateData,
-      });
-    } else {
-      emailContent = emailTemplates.generic({
-        userName: `${user.firstName} ${user.lastName}`,
-        title,
-        message,
-      });
-    }
-
-    const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'Public Grievance System'}" <${process.env.SMTP_USER}>`,
-      to: user.email,
-      subject: emailContent.subject,
-      text: emailContent.text,
-      html: emailContent.html,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ [EMAIL SENT to ${user.email}] Subject: ${emailContent.subject}`);
-    console.log(`   Message ID: ${info.messageId}`);
-    return true;
-  } catch (error) {
-    console.error("❌ Error sending email:", error);
-    return false;
-  }
+// Placeholder for Push Notification logic (e.g., Expo, Firebase)
+const sendPushNotification = async (pushToken, title, body, data) => {
+  if (!pushToken) return;
+  console.log(`[PUSH] Sending to ${pushToken}: ${title} - ${body}`, data);
+  // Implementation for Expo/FCM would go here
 };
 
-/**
- * Core function to create DB record and dispatch notifications via email
- * @param {string} userId - User ID to send notification to
- * @param {string} title - Notification title
- * @param {string} message - Notification message
- * @param {object} meta - Additional metadata (grievanceId, type, etc.)
- */
-export const createAndSendNotification = async (
-  userId,
-  title,
-  message,
-  meta = {}
-) => {
+export const createAndSendNotification = async (userId, title, message, data = {}) => {
   try {
     const user = await User.findById(userId);
-
     if (!user) {
-      console.warn(`❌ Notification failed: User ${userId} not found.`);
-      return null;
+      console.warn(`User ${userId} not found for notification.`);
+      return;
     }
 
-    // 1. Create DB Record (for notification history/UI)
-    const notification = await Notification.create({
-      userId,
-      title,
-      message,
-      meta,
-      type: "email", // Defaulting to email as push is removed
-    });
+    // 1. Send Email
+    if (user.email) {
+      await sendEmail(user.email, title, `<p>${message}</p>`);
+    }
 
-    console.log(`\n📬 === SENDING NOTIFICATION ===`);
-    console.log(`   User: ${user.firstName} ${user.lastName}`);
-    console.log(`   Title: ${title}`);
-    console.log(`   Message: ${message}`);
+    // 2. Send Push Notification
+    if (user.pushToken) {
+      await sendPushNotification(user.pushToken, title, message, data);
+    }
 
-    // 2. Send Email Notification
-    const emailSent = await sendEmailNotification(user, title, message, {
-      ...meta,
-      notificationId: notification._id,
-    });
+    // 3. Log/Save Notification to DB (Optional but good practice)
+    // await Notification.create({ userId, title, message, data });
 
-    console.log(`📊 Notification Status:`);
-    console.log(`   ✉️  Email: ${emailSent ? "✅ Sent" : "❌ Failed"}`);
-    console.log(`=================================\n`);
-
-    return notification;
-  } catch (err) {
-    console.error("❌ NOTIFICATION DISPATCH ERROR:", err);
-    return null;
+    console.log(`Notification processed for user ${userId}`);
+  } catch (error) {
+    console.error('Error in createAndSendNotification:', error);
   }
 };
-

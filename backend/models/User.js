@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
     address: addressSchema,
     role: {
       type: String,
-      enum: ["citizen", "admin", "superadmin", "staff"],
+      enum: ["citizen", "admin", "superadmin", "staff", "official"],
       default: "citizen",
     },
     department: {
@@ -40,6 +40,8 @@ const userSchema = new mongoose.Schema(
     grievanceHistory: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Grievance" },
     ],
+    pushToken: { type: String, unique: true, sparse: true, default: null },
+    managedCategories: [{ type: String, default: [] }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

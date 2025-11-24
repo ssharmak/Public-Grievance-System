@@ -28,15 +28,6 @@ export const createGrievance = async (req, res) => {
     else if (isAnonymous === "false") isAnonymous = false;
     else isAnonymous = !!isAnonymous;
 
-    console.log("📝 CREATE GRIEVANCE - isAnonymous:", isAnonymous, "type:", typeof isAnonymous);
-    console.log("📝 CREATE GRIEVANCE - userId:", userId);
-
-    // Handle file uploads
-    let attachmentPaths = [];
-    if (req.files && req.files.length > 0) {
-      attachmentPaths = req.files.map((f) => `/uploads/${f.filename}`);
-    }
-
     if (!title || !description || !categoryId) {
       return res
         .status(400)
@@ -56,6 +47,12 @@ export const createGrievance = async (req, res) => {
           primaryContact: user?.primaryContact || "",
         };
 
+    // Handle file uploads
+    let attachmentPaths = [];
+    if (req.files && req.files.length > 0) {
+      attachmentPaths = req.files.map((f) => `/uploads/${f.filename}`);
+    }
+
     const grievanceData = {
       grievanceId: generateGrievanceId(),
       userId: isAnonymous ? null : userId,
@@ -69,21 +66,20 @@ export const createGrievance = async (req, res) => {
       isAnonymous,
     };
 
-    console.log("📝 Grievance Data to create:", {
-      ...grievanceData,
-      userId: grievanceData.userId,
-      isAnonymous: grievanceData.isAnonymous,
-    });
-
     const g = await Grievance.create(grievanceData);
 
-    console.log("✅ Grievance created:", {
-      _id: g._id,
-      grievanceId: g.grievanceId,
-      userId: g.userId,
-      isAnonymous: g.isAnonymous,
-      status: g.status,
-    });
+    // Create Attachment documents
+    if (req.files && req.files.length > 0) {
+      const Attachment = (await import("../models/Attachment.js")).default;
+      const attachmentDocs = req.files.map((f) => ({
+        grievanceId: g._id,
+        fileName: f.originalname,
+        filePath: `/uploads/${f.filename}`,
+        fileType: f.mimetype,
+        uploadedBy: userId,
+      }));
+      await Attachment.insertMany(attachmentDocs);
+    }
 
     // notify user (if not anonymous)
     if (!isAnonymous && userId) {
