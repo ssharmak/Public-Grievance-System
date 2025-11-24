@@ -3,18 +3,13 @@ import Category from "../models/Category.js";
 import User from "../models/User.js";
 import StatusHistory from "../models/StatusHistory.js";
 import Notification from "../models/Notification.js";
+import { createAndSendNotification } from "../utils/notificationService.js";
 
 const generateGrievanceId = () =>
   "PGS-" +
   Date.now().toString(36).toUpperCase() +
   "-" +
   Math.random().toString(36).substring(2, 6).toUpperCase();
-
-// helper: notify user in-app
-const notifyUser = async (userId, title, message, meta = {}) => {
-  if (!userId) return;
-  await Notification.create({ userId, title, message, meta, type: "inapp" });
-};
 
 // Citizen – create grievance (logged-in)
 export const createGrievance = async (req, res) => {
@@ -92,11 +87,15 @@ export const createGrievance = async (req, res) => {
 
     // notify user (if not anonymous)
     if (!isAnonymous && userId) {
-      await notifyUser(
+      await createAndSendNotification(
         userId,
         "Grievance Submitted",
-        `Your grievance ${g.grievanceId} has been submitted.`,
-        { grievanceId: g.grievanceId }
+        `Your grievance ${g.grievanceId} has been submitted successfully.`,
+        {
+          grievanceId: g.grievanceId,
+          type: "grievanceSubmitted",
+          title: g.title,
+        }
       );
     }
 
@@ -259,11 +258,16 @@ export const updateStatus = async (req, res) => {
     });
 
     if (g.userId) {
-      await notifyUser(
+      await createAndSendNotification(
         g.userId,
         "Grievance Status Updated",
         `Your grievance ${g.grievanceId} status changed from ${oldStatus} to ${status}.`,
-        { grievanceId: g.grievanceId }
+        {
+          grievanceId: g.grievanceId,
+          type: "statusUpdate",
+          oldStatus,
+          newStatus: status,
+        }
       );
     }
 

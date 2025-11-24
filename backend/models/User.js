@@ -40,10 +40,6 @@ const userSchema = new mongoose.Schema(
     grievanceHistory: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Grievance" },
     ],
-    pushToken: {
-      type: String,
-      default: null,
-    },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

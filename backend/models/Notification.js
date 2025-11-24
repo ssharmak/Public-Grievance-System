@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["email", "sms", "push", "inapp"],
+      enum: ["email", "sms", "inapp"],
       default: "inapp",
     },
     title: String,

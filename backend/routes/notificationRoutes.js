@@ -1,9 +1,13 @@
 import express from "express";
 import { verifyToken } from "../middlewares/authMiddleware.js";
-import { getMyNotifications } from "../controllers/notificationController.js";
+import {
+  sendNotification,
+  getMyNotifications,
+} from "../controllers/notificationController.js";
 
 const router = express.Router();
 
-router.get("/my", verifyToken, getMyNotifications);
+router.get("/", verifyToken, getMyNotifications);
+router.post("/send", verifyToken, sendNotification);
 
 export default router;

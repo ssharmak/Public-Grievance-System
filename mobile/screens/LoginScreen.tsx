@@ -10,8 +10,7 @@ import {
 } from "react-native";
 import { Text, TextInput, Button, Card } from "react-native-paper";
 import { login } from "../services/authService";
-import { registerForPushNotificationsAsync } from "../utils/pushNotifications";
-import { registerPushToken } from "../services/notificationService";
+// Push notification imports removed
 
 const PRIMARY = "#1E88E5";
 
@@ -32,17 +31,7 @@ export default function LoginScreen({ navigation }: any) {
       const res = await login({ emailOrPhone: emailOrPhone.trim(), password });
 
       if (res.token) {
-        // Register for push notifications after successful login
-        try {
-          const pushToken = await registerForPushNotificationsAsync();
-          if (pushToken) {
-            await registerPushToken(pushToken);
-            console.log("✅ Push token registered successfully");
-          }
-        } catch (pushError) {
-          console.warn("Push notification registration failed:", pushError);
-          // Don't block login flow if push notification fails
-        }
+        // Push notification registration removed
 
         navigation.reset({
           index: 0,
