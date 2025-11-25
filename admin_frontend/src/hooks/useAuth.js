@@ -7,7 +7,7 @@ export const useAuth = () => {
   // For now, we'll read from localStorage or default to MOCK_USER_OFFICIAL
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : MOCK_USER_OFFICIAL;
+    return stored ? JSON.parse(stored) : null;
   });
 
   const isOfficial = user?.role === 'official';

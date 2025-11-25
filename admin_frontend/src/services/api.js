@@ -23,32 +23,13 @@ api.interceptors.request.use(
   }
 );
 
-// Mock data for simulation
-export const MOCK_USER_OFFICIAL = {
-  id: 'off1',
-  name: 'Official User',
-  role: 'official',
-  managedCategories: ['water', 'electricity'],
-  email: 'official@example.com'
-};
+// Mock data for simulation - REMOVED for real integration
+export const MOCK_USER_OFFICIAL = null;
+export const MOCK_USER_SUPER_ADMIN = null;
 
-export const MOCK_USER_SUPER_ADMIN = {
-  id: 'admin1',
-  name: 'Super Admin',
-  role: 'super_admin',
-  managedCategories: [], // Super admin sees all or manages system
-  email: 'admin@example.com'
-};
-
-// Simulate loading user context (mock)
+// Simulate loading user context (mock) - REMOVED
 export const loadMockUser = (type = 'official') => {
-  const user = type === 'super_admin' ? MOCK_USER_SUPER_ADMIN : MOCK_USER_OFFICIAL;
-  localStorage.setItem('user', JSON.stringify(user));
-  // In a real app, we might set a mock token too
-  if (!localStorage.getItem('token')) {
-    localStorage.setItem('token', 'mock-token-123');
-  }
-  return user;
+  return null;
 };
 
 export default api;

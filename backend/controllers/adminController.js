@@ -14,23 +14,8 @@ const getCategoryIdsFromKeys = async (keys) => {
 export const getGrievanceSummary = async (req, res) => {
   try {
     console.log(`[Admin] Summary requested by ${req.user.email} (${req.user.role})`);
-    let filter = {};
     
-    // Apply department filter if not superadmin
-    if (req.user.role !== 'superadmin') {
-       if (req.user.managedCategories && req.user.managedCategories.length > 0) {
-         const categoryIds = await getCategoryIdsFromKeys(req.user.managedCategories);
-         filter.category = { $in: categoryIds };
-         console.log(`[Admin] Filtering by categories: ${req.user.managedCategories} -> IDs: ${categoryIds}`);
-       } else {
-         console.warn(`[Admin] User ${req.user.email} has no managed categories!`);
-         // If we want to be strict, we could return empty or error, but middleware should have caught this.
-         // We'll let it pass (returning global or empty depending on logic), but here it implies NO filter, so ALL data?
-         // Actually, if they have NO managed categories, they shouldn't see anything.
-         // Let's force an empty result if not superadmin and no categories.
-         return res.json({ total: 0, pending: 0, resolved: 0, myDepartmentPending: 0 });
-       }
-    }
+    const filter = {};
 
     const total = await Grievance.countDocuments(filter);
     const resolved = await Grievance.countDocuments({ ...filter, status: 'Resolved' });
@@ -57,16 +42,7 @@ export const getGrievanceSummary = async (req, res) => {
 
 export const getAllGrievances = async (req, res) => {
   try {
-    let filter = {};
-    
-    if (req.user.role !== 'superadmin') {
-      if (req.user.managedCategories && req.user.managedCategories.length > 0) {
-        const categoryIds = await getCategoryIdsFromKeys(req.user.managedCategories);
-        filter.category = { $in: categoryIds };
-      } else {
-        return res.json([]); // No categories = no access
-      }
-    }
+    const filter = {};
 
     const grievances = await Grievance.find(filter)
       .populate('category', 'name key')
@@ -96,11 +72,18 @@ export const updateGrievanceStatus = async (req, res) => {
     const { grievanceId } = req.params;
     const { status } = req.body;
     
-    const grievance = await Grievance.findOne({ grievanceId });
+    // Find grievance and populate category to check access
+    const grievance = await Grievance.findOne({ grievanceId }).populate('category');
     if (!grievance) return res.status(404).json({ message: 'Grievance not found' });
 
-    // Check access (optional double check, though middleware should handle route access)
-    // Ideally we check if the grievance category matches user's managed categories
+    // Enforce Department Access - REMOVED as per requirement for single admin
+    // if (req.user.role !== 'superadmin') {
+    //   const grievanceCategoryKey = grievance.category?.key;
+    //   if (!req.user.managedCategories.includes(grievanceCategoryKey)) {
+    //     console.warn(`[Admin] Access Denied: User ${req.user.email} tried to update ${grievanceId} (Category: ${grievanceCategoryKey})`);
+    //     return res.status(403).json({ message: 'Access denied: You do not manage this category.' });
+    //   }
+    // }
 
     const oldStatus = grievance.status;
     grievance.status = status;
@@ -176,6 +159,53 @@ export const getOfficials = async (req, res) => {
     res.json(mapped);
   } catch (error) {
     console.error('Get Officials Error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const assignOfficial = async (req, res) => {
+  try {
+    const { grievanceId } = req.params;
+    const { officialId } = req.body;
+
+    const grievance = await Grievance.findOne({ grievanceId });
+    if (!grievance) return res.status(404).json({ message: 'Grievance not found' });
+
+    const official = await User.findById(officialId);
+    if (!official) return res.status(404).json({ message: 'Official not found' });
+
+    // Update grievance
+    const oldStatus = grievance.status;
+    grievance.assignedTo = officialId;
+    grievance.status = 'Assigned'; // Auto-update status to Assigned
+    await grievance.save();
+
+    // Log history
+    await StatusHistory.create({
+      grievance: grievance._id,
+      oldStatus,
+      newStatus: 'Assigned',
+      changedBy: req.user.id,
+      note: `Assigned to ${official.firstName} ${official.lastName}`,
+    });
+
+    // Notify Official
+    if (official.email) {
+      // Assuming we have a way to notify via email or push
+      // For now using the existing notification service which might be push-only or email-based
+      // The prompt says "Send a notification to the assigned official."
+      // We'll use createAndSendNotification if it supports user IDs.
+      await createAndSendNotification(
+        official._id,
+        'New Grievance Assigned',
+        `You have been assigned grievance ${grievanceId}.`,
+        { grievanceId: grievance.grievanceId }
+      );
+    }
+
+    res.json({ message: 'Official assigned successfully', grievance });
+  } catch (error) {
+    console.error('Assign Official Error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

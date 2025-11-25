@@ -35,3 +35,9 @@ export const getOfficials = async () => {
   const response = await api.get('/admin/users/officials');
   return response.data;
 };
+
+// Assign Official
+export const assignOfficial = async (grievanceId, officialId) => {
+  const response = await api.post(`/admin/${grievanceId}/assign`, { officialId });
+  return response.data;
+};

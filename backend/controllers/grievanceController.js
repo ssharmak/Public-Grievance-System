@@ -223,6 +223,18 @@ export const adminGetOne = async (req, res) => {
 
     if (!g) return res.status(404).json({ message: "Grievance not found" });
 
+    // Enforce Department Access - REMOVED for single admin policy
+    // if (req.user.role !== 'superadmin') { 
+    //   if (req.user.managedCategories && req.user.managedCategories.length > 0) {
+    //      const grievanceCategoryKey = g.category?.key;
+    //      if (!req.user.managedCategories.includes(grievanceCategoryKey)) {
+    //         return res.status(403).json({ message: "Access denied: You do not manage this category." });
+    //      }
+    //   } else {
+    //      return res.status(403).json({ message: "Access denied: No managed categories assigned." });
+    //   }
+    // }
+
     const history = await StatusHistory.find({ grievance: g._id })
       .populate("changedBy", "firstName lastName email")
       .sort({ createdAt: -1 });

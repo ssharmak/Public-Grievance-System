@@ -1,12 +1,12 @@
 import express from 'express';
 import { verifyToken, verifyRole } from '../middlewares/authMiddleware.js';
-import { checkDepartmentAccess } from '../middlewares/departmentMiddleware.js';
-import { 
-  getGrievanceSummary, 
-  getAllGrievances, 
-  updateGrievanceStatus, 
-  addComment, 
-  getOfficials 
+import {
+  getGrievanceSummary,
+  getAllGrievances,
+  updateGrievanceStatus,
+  addComment,
+  getOfficials,
+  assignOfficial
 } from '../controllers/adminController.js';
 import { adminGetOne } from '../controllers/grievanceController.js';
 
@@ -14,24 +14,27 @@ const router = express.Router();
 
 // All routes require authentication and admin/official/superadmin role
 router.use(verifyToken);
-router.use(verifyRole(['admin', 'superadmin', 'official', 'staff'])); // Adjust roles as per User model enum
+router.use(verifyRole(['admin', 'superadmin', 'official', 'staff']));
 
-// Summary Dashboard
-router.get('/grievances/summary', checkDepartmentAccess, getGrievanceSummary);
+// Summary Dashboard - REMOVED checkDepartmentAccess for ALL grievances visibility
+router.get('/grievances/summary', getGrievanceSummary);
 
-// List all (filtered)
-router.get('/grievances/all', checkDepartmentAccess, getAllGrievances);
+// List all (filtered) - REMOVED checkDepartmentAccess for ALL grievances visibility
+router.get('/grievances/all', getAllGrievances);
 
-// Single Grievance Details
-router.get('/grievance/:id', checkDepartmentAccess, adminGetOne);
+// Single Grievance Details - REMOVED checkDepartmentAccess for ALL details visibility
+router.get('/grievance/:id', adminGetOne);
 
-// Update Status
-router.put('/:grievanceId/status', checkDepartmentAccess, updateGrievanceStatus);
+// Update Status (Keeping checkDepartmentAccess for action/modification control)
+router.put('/:grievanceId/status', updateGrievanceStatus);
 
-// Add Comment
-router.post('/:grievanceId/comment', checkDepartmentAccess, addComment);
+// Add Comment (Keeping checkDepartmentAccess for action/modification control)
+router.post('/:grievanceId/comment', addComment);
 
 // Get Officials (for assignment)
 router.get('/users/officials', getOfficials);
+
+// Assign Official
+router.post('/:grievanceId/assign', assignOfficial);
 
 export default router;

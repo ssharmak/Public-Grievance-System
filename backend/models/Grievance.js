@@ -42,6 +42,12 @@ const grievanceSchema = new mongoose.Schema(
 
     location: { type: String },
 
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
     isAnonymous: { type: Boolean, default: false },
   },
   { timestamps: true }

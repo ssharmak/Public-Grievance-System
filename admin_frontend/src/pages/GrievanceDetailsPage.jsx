@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { fetchGrievanceDetails, updateGrievanceStatus, addComment, getOfficials } from '../services/adminService';
+import { fetchGrievanceDetails, updateGrievanceStatus, addComment, getOfficials, assignOfficial } from '../services/adminService';
 import { ArrowLeft, Download, Send, UserPlus } from 'lucide-react';
 
 const GrievanceDetailsPage = () => {
@@ -14,6 +14,7 @@ const GrievanceDetailsPage = () => {
   const [comment, setComment] = useState('');
   const [showAssign, setShowAssign] = useState(false);
   const [officials, setOfficials] = useState([]);
+  const [selectedOfficial, setSelectedOfficial] = useState('');
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
@@ -65,6 +66,19 @@ const GrievanceDetailsPage = () => {
       }
     }
     setShowAssign(!showAssign);
+  };
+
+  const handleAssign = async () => {
+    if (!selectedOfficial) return;
+    try {
+      await assignOfficial(grievance.grievanceId, selectedOfficial);
+      setShowAssign(false);
+      loadData(); // Refresh to show new status/history
+      alert('Official assigned successfully');
+    } catch (error) {
+      console.error("Failed to assign official", error);
+      alert('Failed to assign official');
+    }
   };
 
   if (loading) return <div className="container">Loading details...</div>;
@@ -157,17 +171,21 @@ const GrievanceDetailsPage = () => {
                   <UserPlus size={16} style={{ marginRight: '8px' }} /> Assign
                 </button>
               </div>
-              {showAssign && (
-                <div className="flex gap-4">
-                  <select className="input">
-                    <option value="">Select Official</option>
-                    {officials.map(off => (
-                      <option key={off.id} value={off.id}>{off.name}</option>
-                    ))}
-                  </select>
-                  <button className="btn btn-primary">Assign</button>
-                </div>
-              )}
+                {showAssign && (
+                  <div className="flex gap-4">
+                    <select 
+                      className="input"
+                      value={selectedOfficial}
+                      onChange={(e) => setSelectedOfficial(e.target.value)}
+                    >
+                      <option value="">Select Official</option>
+                      {officials.map(off => (
+                        <option key={off.id} value={off.id}>{off.name}</option>
+                      ))}
+                    </select>
+                    <button className="btn btn-primary" onClick={handleAssign}>Assign</button>
+                  </div>
+                )}
             </div>
           )}
 
