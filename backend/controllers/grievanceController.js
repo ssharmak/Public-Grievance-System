@@ -219,7 +219,7 @@ export const adminGetOne = async (req, res) => {
     const g = await Grievance.findOne({ grievanceId: req.params.id })
       .populate("category", "name key")
       .populate("assignedTo", "firstName lastName email")
-      .populate("department", "name key");
+      .populate("assignedTo", "firstName lastName email");
 
     if (!g) return res.status(404).json({ message: "Grievance not found" });
 

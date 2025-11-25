@@ -30,7 +30,7 @@ const grievanceSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Submitted", "In Review", "Assigned", "Resolved", "Closed"],
+      enum: ["Submitted", "In Review", "Assigned", "In Progress", "Resolved", "Closed", "Rejected"],
       default: "Submitted",
     },
 
