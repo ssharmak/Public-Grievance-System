@@ -25,16 +25,28 @@ export const register = async (req, res) => {
   }
 
   try {
+    // Helper to format phone number
+    const formatPhone = (phone) => {
+      if (!phone) return phone;
+      if (phone.startsWith('+')) return phone;
+      return `+91${phone}`;
+    };
+
+    // Re-writing the destructuring block to include secondaryContact
     const {
       firstName,
       middleName,
       lastName,
       gender,
       dob,
-      primaryContact,
+      primaryContact: rawPrimary,
+      secondaryContact: rawSecondary,
       email,
-      password,
+      password: rawPassword,
     } = req.body;
+
+    const primaryContact = formatPhone(rawPrimary);
+    const secondaryContact = formatPhone(rawSecondary);
 
     const exists = await User.findOne({
       $or: [{ email }, { primaryContact }],
@@ -46,7 +58,7 @@ export const register = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
 
     const user = await User.create({
       firstName,
@@ -55,6 +67,7 @@ export const register = async (req, res) => {
       gender,
       dob,
       primaryContact,
+      secondaryContact,
       email,
       password: hashedPassword,
     });
