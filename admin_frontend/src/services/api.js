@@ -23,6 +23,22 @@ api.interceptors.request.use(
   }
 );
 
+// Add a response interceptor to handle token expiration
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Mock data for simulation - REMOVED for real integration
 export const MOCK_USER_OFFICIAL = null;
 export const MOCK_USER_SUPER_ADMIN = null;
