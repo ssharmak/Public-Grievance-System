@@ -15,7 +15,15 @@ import upload from "../middlewares/uploadMiddleware.js";
 const router = express.Router();
 
 // Citizen Routes
-router.post("/", verifyToken, upload.array("attachments", 5), createGrievance);
+router.post(
+  "/",
+  verifyToken,
+  upload.fields([
+    { name: "photos", maxCount: 5 },
+    { name: "pdf", maxCount: 1 },
+  ]),
+  createGrievance
+);
 router.get("/me", verifyToken, getMyGrievances);
 router.get("/:id", verifyToken, getSingleGrievance);
 

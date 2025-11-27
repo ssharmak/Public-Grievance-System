@@ -49,8 +49,14 @@ export const createGrievance = async (req, res) => {
 
     // Handle file uploads
     let attachmentPaths = [];
-    if (req.files && req.files.length > 0) {
-      attachmentPaths = req.files.map((f) => `/uploads/${f.filename}`);
+    let allFiles = [];
+
+    if (req.files) {
+      const photos = req.files["photos"] || [];
+      const pdf = req.files["pdf"] || [];
+      allFiles = [...photos, ...pdf];
+      
+      attachmentPaths = allFiles.map((f) => f.location || f.path);
     }
 
     const grievanceData = {
@@ -69,12 +75,12 @@ export const createGrievance = async (req, res) => {
     const g = await Grievance.create(grievanceData);
 
     // Create Attachment documents
-    if (req.files && req.files.length > 0) {
+    if (allFiles.length > 0) {
       const Attachment = (await import("../models/Attachment.js")).default;
-      const attachmentDocs = req.files.map((f) => ({
+      const attachmentDocs = allFiles.map((f) => ({
         grievanceId: g._id,
         fileName: f.originalname,
-        filePath: `/uploads/${f.filename}`,
+        filePath: f.location || f.path,
         fileType: f.mimetype,
         uploadedBy: userId,
       }));

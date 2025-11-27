@@ -101,13 +101,36 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
       formData.append("location", location);
       formData.append("isAnonymous", String(isAnonymous));
 
-      attachments.forEach((file, index) => {
-        formData.append("attachments", {
+      let photoCount = 0;
+      let pdfCount = 0;
+
+      for (const file of attachments) {
+        const type = file.mimeType || "application/octet-stream";
+        const fileObj = {
           uri: file.uri,
           name: file.name,
-          type: file.mimeType || "application/octet-stream",
-        } as any);
-      });
+          type: type,
+        } as any;
+
+        if (type === "application/pdf") {
+          pdfCount++;
+          if (pdfCount > 1) {
+            setLoading(false);
+            return Alert.alert("Limit Exceeded", "You can upload only 1 PDF.");
+          }
+          formData.append("pdf", fileObj);
+        } else if (type.startsWith("image/")) {
+          photoCount++;
+          if (photoCount > 5) {
+            setLoading(false);
+            return Alert.alert("Limit Exceeded", "You can upload maximum 5 photos.");
+          }
+          formData.append("photos", fileObj);
+        } else {
+           // Fallback or ignore
+           // formData.append("attachments", fileObj); 
+        }
+      }
 
       await submitGrievance(formData);
 
