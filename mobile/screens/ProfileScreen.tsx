@@ -18,11 +18,19 @@ import {
   Avatar,
   Chip,
   Divider,
+  Portal,
+  Modal,
+  IconButton,
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
-import { getMyProfile, updateMyProfile } from "../services/userService";
+import {
+  getMyProfile,
+  updateMyProfile,
+  sendPhoneVerificationOtp,
+  verifyPhoneOtp,
+} from "../services/userService";
 import { logout } from "../services/authService";
 
 const PRIMARY = "#1E88E5";
@@ -32,6 +40,11 @@ export default function ProfileScreen({ navigation }: any) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Verification State
+  const [verifying, setVerifying] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otp, setOtp] = useState("");
 
   const loadProfile = async () => {
     try {
@@ -86,6 +99,36 @@ export default function ProfileScreen({ navigation }: any) {
   const handleLogout = async () => {
     await logout();
     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  };
+
+  // Phone Verification Handlers
+  const handleRequestVerification = async () => {
+    try {
+      setVerifying(true);
+      await sendPhoneVerificationOtp();
+      setShowOtpModal(true);
+      Alert.alert("OTP Sent", "Please check your mobile number for the OTP.");
+    } catch (err: any) {
+      Alert.alert("Error", err.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp) return Alert.alert("Error", "Please enter OTP");
+    try {
+      setVerifying(true);
+      await verifyPhoneOtp(otp);
+      Alert.alert("Success", "Phone number verified!");
+      setShowOtpModal(false);
+      setOtp("");
+      loadProfile(); // Reload to update status
+    } catch (err: any) {
+      Alert.alert("Error", err.response?.data?.message || "Invalid OTP");
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -189,14 +232,33 @@ export default function ProfileScreen({ navigation }: any) {
             <Card.Title title="Contact Details" />
             <Divider />
             <Card.Content>
-              <TextInput
-                mode="outlined"
-                label="Primary Contact"
-                style={styles.input}
-                value={user.primaryContact || ""}
-                keyboardType="phone-pad"
-                onChangeText={(v) => setUser({ ...user, primaryContact: v })}
-              />
+              <View>
+                <TextInput
+                  mode="outlined"
+                  label="Primary Contact"
+                  style={styles.input}
+                  value={user.primaryContact || ""}
+                  keyboardType="phone-pad"
+                  onChangeText={(v) => setUser({ ...user, primaryContact: v })}
+                  right={
+                    <TextInput.Icon
+                      icon={user.isPhoneVerified ? "check-circle" : "alert-circle"}
+                      color={user.isPhoneVerified ? "green" : "orange"}
+                    />
+                  }
+                />
+                {!user.isPhoneVerified && (
+                  <TouchableOpacity
+                    onPress={handleRequestVerification}
+                    style={styles.verifyLink}
+                  >
+                    <Text style={{ color: PRIMARY, fontWeight: "bold" }}>
+                      Verify Now
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <TextInput
                 mode="outlined"
                 label="Secondary Contact"
@@ -256,6 +318,37 @@ export default function ProfileScreen({ navigation }: any) {
           <View style={{ height: 80 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* OTP Modal */}
+      <Portal>
+        <Modal
+          visible={showOtpModal}
+          onDismiss={() => setShowOtpModal(false)}
+          contentContainerStyle={styles.modalContent}
+        >
+          <Text style={styles.modalTitle}>Enter OTP</Text>
+          <Text style={{ marginBottom: 16, color: "#666" }}>
+            Sent to {user.primaryContact}
+          </Text>
+          <TextInput
+            mode="outlined"
+            label="6-Digit OTP"
+            value={otp}
+            onChangeText={setOtp}
+            keyboardType="number-pad"
+            maxLength={6}
+            style={{ marginBottom: 20, backgroundColor: "#fff" }}
+          />
+          <Button
+            mode="contained"
+            onPress={handleVerifyOtp}
+            loading={verifying}
+            buttonColor={PRIMARY}
+          >
+            Verify
+          </Button>
+        </Modal>
+      </Portal>
     </View>
   );
 }
@@ -308,4 +401,24 @@ const styles = StyleSheet.create({
   },
 
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  verifyLink: {
+    alignSelf: "flex-end",
+    marginTop: -8,
+    marginBottom: 12,
+    marginRight: 4,
+  },
+
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    margin: 20,
+    borderRadius: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: PRIMARY,
+  },
 });

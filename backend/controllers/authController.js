@@ -200,3 +200,65 @@ export const resetPasswordWithOtp = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const sendPhoneVerificationOtp = async (req, res) => {
+  try {
+    // User ID comes from auth middleware
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.isPhoneVerified) {
+      return res.status(400).json({ message: "Phone number already verified" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Set expiry (10 minutes)
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.phoneVerificationOtp = otp;
+    user.phoneVerificationOtpExpires = expires;
+    await user.save();
+
+    // Send SMS
+    const message = `Your OTP for phone verification is ${otp}. Valid for 10 minutes.`;
+    await sendSMS(user.primaryContact, message);
+
+    res.json({ message: "Verification OTP sent to your registered mobile number." });
+  } catch (err) {
+    console.error("SEND VERIFICATION OTP ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const verifyPhoneOtp = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { otp } = req.body;
+
+    const user = await User.findOne({
+      _id: userId,
+      phoneVerificationOtp: otp,
+      phoneVerificationOtpExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    user.isPhoneVerified = true;
+    user.phoneVerificationOtp = null;
+    user.phoneVerificationOtpExpires = null;
+    await user.save();
+
+    res.json({ message: "Phone number verified successfully!" });
+  } catch (err) {
+    console.error("VERIFY PHONE OTP ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

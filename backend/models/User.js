@@ -45,6 +45,9 @@ const userSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     resetPasswordOtp: { type: String, default: null },
     resetPasswordOtpExpires: { type: Date, default: null },
+    isPhoneVerified: { type: Boolean, default: false },
+    phoneVerificationOtp: { type: String, default: null },
+    phoneVerificationOtpExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );
