@@ -129,8 +129,13 @@ export default function GrievanceDetailsScreen({ route, navigation }: any) {
             <Card.Title title="Attachments" />
             <Card.Content>
               {g.attachments.map((a: string, i: number) => {
-                const baseUrl = API_BASE.replace("/api", "");
-                const url = baseUrl + a;
+                let url = a;
+                if (!a.startsWith("http")) {
+                   const baseUrl = API_BASE.replace("/api", "");
+                   // Ensure 'a' starts with / if not present, though usually it does from backend
+                   const path = a.startsWith("/") ? a : "/" + a;
+                   url = baseUrl + path;
+                }
                 return (
                   <View key={i} style={styles.attachmentRow}>
                     <Text style={{ flex: 1 }} numberOfLines={1}>

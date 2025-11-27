@@ -6,11 +6,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  TextInput as NativeTextInput,
 } from "react-native";
 import {
   Text,
   Card,
-  TextInput,
   Button,
   IconButton,
   Divider,
@@ -23,6 +23,24 @@ import * as DocumentPicker from "expo-document-picker";
 import { submitGrievance, getCategories } from "../services/grievanceService";
 
 const PRIMARY = "#1E88E5";
+
+// Helper Component for consistent Native Inputs
+const FormInput = ({ label, value, onChangeText, placeholder, multiline = false, numberOfLines = 1, style }: any) => (
+  <View style={{ marginBottom: 12 }}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={[styles.pickerBox, { paddingHorizontal: 10, paddingVertical: multiline ? 8 : 0, height: multiline ? 120 : 50, justifyContent: 'center' }]}>
+      <NativeTextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        multiline={multiline}
+        numberOfLines={numberOfLines}
+        style={[{ fontSize: 16, color: '#333' }, multiline && { textAlignVertical: 'top', flex: 1 }, style]}
+        underlineColorAndroid="transparent"
+      />
+    </View>
+  </View>
+);
 
 export default function SubmitGrievanceScreen({ navigation }: any) {
   const [title, setTitle] = useState("");
@@ -44,7 +62,7 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
     try {
       setCatsLoading(true);
       const data = await getCategories();
-      setCategories(data);
+      setCategories(Array.isArray(data) ? data : []);
     } catch (err) {
       console.log("Error fetching categories", err);
       Alert.alert("Error", "Failed to load categories");
@@ -52,6 +70,13 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
       setCatsLoading(false);
     }
   };
+
+  const categoryItems = React.useMemo(() => {
+    if (!Array.isArray(categories)) return null;
+    return categories.map((c) => (
+      <Picker.Item key={c._id} label={c.name} value={c._id} />
+    ));
+  }, [categories]);
 
   const pickDocument = async () => {
     try {
@@ -61,6 +86,18 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
+        
+        // Check size (10MB limit)
+        if (file.size && file.size > 10 * 1024 * 1024) {
+           Alert.alert("File too large", "Please select a file smaller than 10MB");
+           return;
+        }
+        // Check for duplicates
+        const isDuplicate = attachments.some(a => a.name === file.name && a.size === file.size);
+        if (isDuplicate) {
+          Alert.alert("Duplicate", "This file has already been added.");
+          return;
+        }
         setAttachments([...attachments, file]);
       }
     } catch (err) {
@@ -138,12 +175,23 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
       Alert.alert("Success", "Grievance submitted!", [
         {
           text: "OK",
-          onPress: () => navigation.navigate("GrievanceHistory"),
+          onPress: () => {
+            // Reset form
+            setTitle("");
+            setDescription("");
+            setCategoryId("");
+            setPriority("Medium");
+            setLocation("");
+            setAttachments([]);
+            setIsAnonymous(false);
+            navigation.navigate("GrievanceHistory");
+          },
         },
       ]);
     } catch (err: any) {
       setLoading(false);
-      Alert.alert("Error", "Something went wrong!");
+      const errorMessage = err.response?.data?.message || err.message || "Something went wrong!";
+      Alert.alert("Error", errorMessage);
       console.log(err.response?.data || err);
     }
   };
@@ -164,13 +212,11 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
           <ScrollView contentContainerStyle={styles.container}>
             <Card style={styles.card}>
               <Card.Content>
-                <TextInput
-                  mode="outlined"
+                <FormInput
                   label="Title"
                   placeholder="Short and clear title"
                   value={title}
                   onChangeText={setTitle}
-                  style={styles.input}
                 />
 
                 <Text style={styles.label}>Category</Text>
@@ -185,9 +231,7 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
                       style={{ backgroundColor: "#fff" }}
                     >
                       <Picker.Item label="Select category" value="" />
-                      {categories.map((c) => (
-                        <Picker.Item key={c._id} label={c.name} value={c._id} />
-                      ))}
+                      {categoryItems}
                     </Picker>
                   )}
                 </View>
@@ -206,24 +250,20 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
                   </Picker>
                 </View>
 
-                <TextInput
-                  mode="outlined"
+                <FormInput
                   label="Location (optional)"
                   placeholder="Nearby landmark"
                   value={location}
                   onChangeText={setLocation}
-                  style={styles.input}
                 />
 
-                <TextInput
-                  mode="outlined"
+                <FormInput
                   label="Description"
-                  multiline
-                  numberOfLines={5}
                   placeholder="Describe the issue"
                   value={description}
                   onChangeText={setDescription}
-                  style={[styles.input, { textAlignVertical: "top" }]}
+                  multiline
+                  numberOfLines={5}
                 />
 
                 <View style={styles.anonRow}>
@@ -269,16 +309,17 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          removeClippedSubviews={false}
+        >
           <Card style={styles.card}>
             <Card.Content>
-              <TextInput
-                mode="outlined"
+              <FormInput
                 label="Title"
                 placeholder="Short and clear title"
                 value={title}
                 onChangeText={setTitle}
-                style={styles.input}
               />
 
               <Text style={styles.label}>Category</Text>
@@ -286,17 +327,15 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
                 {catsLoading ? (
                   <ActivityIndicator size="small" style={{ padding: 14 }} />
                 ) : (
-                  <Picker
-                    selectedValue={categoryId}
-                    onValueChange={(v) => setCategoryId(v)}
-                    mode="dropdown"
-                    style={{ backgroundColor: "#fff" }}
-                  >
-                    <Picker.Item label="Select category" value="" />
-                    {categories.map((c) => (
-                      <Picker.Item key={c._id} label={c.name} value={c._id} />
-                    ))}
-                  </Picker>
+                    <Picker
+                      selectedValue={categoryId}
+                      onValueChange={(v) => setCategoryId(v)}
+                      mode="dropdown"
+                      style={{ backgroundColor: "#fff" }}
+                    >
+                      <Picker.Item label="Select category" value="" />
+                      {categoryItems}
+                    </Picker>
                 )}
               </View>
 
@@ -314,24 +353,20 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
                 </Picker>
               </View>
 
-              <TextInput
-                mode="outlined"
+              <FormInput
                 label="Location (optional)"
                 placeholder="Nearby landmark"
                 value={location}
                 onChangeText={setLocation}
-                style={styles.input}
               />
 
-              <TextInput
-                mode="outlined"
+              <FormInput
                 label="Description"
-                multiline
-                numberOfLines={5}
                 placeholder="Describe the issue"
                 value={description}
                 onChangeText={setDescription}
-                style={[styles.input, { textAlignVertical: "top" }]}
+                multiline
+                numberOfLines={5}
               />
 
               <View style={styles.anonRow}>
@@ -391,7 +426,7 @@ const styles = StyleSheet.create({
     color: "#444",
     fontSize: 14,
   },
-  input: { marginBottom: 12, backgroundColor: "#fff" },
+  // input style removed as we use pickerBox for inputs now
   pickerBox: {
     borderWidth: 1,
     borderColor: "#79747E",

@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { validationResult } from "express-validator";
+import { sendSMS } from "../utils/smsService.js";
 
 // Generate Token Helper
 const generateToken = (user) => {
@@ -129,7 +130,6 @@ export const login = async (req, res) => {
   }
 };
 
-import { sendSMS } from "../utils/smsService.js";
 
 export const forgotPasswordOtp = async (req, res) => {
   try {
