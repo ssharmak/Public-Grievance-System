@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -17,6 +17,7 @@ import {
   Chip,
 } from "react-native-paper";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import PhoneInput from "react-native-phone-number-input";
 import { register } from "../services/authService";
 
 const PRIMARY = "#1E88E5";
@@ -27,6 +28,9 @@ export default function RegisterScreen({ navigation }: any) {
   const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const phoneInput = useRef<PhoneInput>(null);
+  const secondaryPhoneInput = useRef<PhoneInput>(null);
+
   const [form, setForm] = useState({
     firstName: "",
     middleName: "",
@@ -34,6 +38,7 @@ export default function RegisterScreen({ navigation }: any) {
     gender: "",
     dob: null as Date | null,
     primaryContact: "",
+    secondaryContact: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -56,6 +61,41 @@ export default function RegisterScreen({ navigation }: any) {
   const handleRegister = async () => {
     if (!form.firstName || !form.lastName || !form.gender || !form.dob) {
       return Alert.alert("Missing Fields", "Please fill all required fields");
+    }
+
+    if (!form.primaryContact) {
+      return Alert.alert("Missing Fields", "Primary contact is required");
+    }
+
+    const primaryCode = phoneInput.current?.getCountryCode();
+    const isPrimaryValid = phoneInput.current?.isValidNumber(form.primaryContact);
+    
+    // Strict 10-digit check for India
+    if (primaryCode === 'IN') {
+       // form.primaryContact includes country code (e.g., +919876543210). 
+       // Length should be 13 (+91 + 10 digits).
+       if (form.primaryContact.length !== 13) {
+          return Alert.alert("Invalid Contact", "Primary contact must be exactly 10 digits");
+       }
+    }
+
+    if (!isPrimaryValid) {
+      return Alert.alert("Invalid Contact", "Please enter a valid primary contact number");
+    }
+
+    if (form.secondaryContact) {
+      const secondaryCode = secondaryPhoneInput.current?.getCountryCode();
+      const isSecondaryValid = secondaryPhoneInput.current?.isValidNumber(form.secondaryContact);
+      
+      if (secondaryCode === 'IN') {
+         if (form.secondaryContact.length !== 13) {
+            return Alert.alert("Invalid Contact", "Secondary contact must be exactly 10 digits");
+         }
+      }
+
+      if (!isSecondaryValid) {
+        return Alert.alert("Invalid Contact", "Please enter a valid secondary contact number");
+      }
     }
 
     if (form.password !== form.confirmPassword) {
@@ -89,10 +129,17 @@ export default function RegisterScreen({ navigation }: any) {
       }
     } catch (err: any) {
       console.log(err.response?.data || err);
-      Alert.alert(
-        "Registration Failed",
-        err?.response?.data?.message || "Something went wrong"
-      );
+      
+      let errorMessage = "Something went wrong";
+      
+      if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        // Handle express-validator errors array
+        errorMessage = err.response.data.errors.map((e: any) => e.msg).join("\n");
+      }
+
+      Alert.alert("Registration Failed", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -185,14 +232,36 @@ export default function RegisterScreen({ navigation }: any) {
                 Account Details
               </Text>
 
-              <TextInput
-                label="Primary Contact *"
-                mode="outlined"
-                style={styles.input}
-                value={form.primaryContact}
-                onChangeText={(v) => handleChange("primaryContact", v)}
-                keyboardType="phone-pad"
-                left={<TextInput.Icon icon="phone" />}
+              <Text style={styles.label}>Primary Contact *</Text>
+              <PhoneInput
+                ref={phoneInput}
+                defaultValue={form.primaryContact}
+                defaultCode="IN"
+                layout="first"
+                onChangeFormattedText={(text: string) => {
+                  handleChange("primaryContact", text);
+                }}
+                containerStyle={styles.phoneContainer}
+                textContainerStyle={styles.phoneTextContainer}
+                withDarkTheme
+                withShadow
+                textInputProps={{ maxLength: 10 }}
+              />
+
+              <Text style={styles.label}>Secondary Contact</Text>
+              <PhoneInput
+                ref={secondaryPhoneInput}
+                defaultValue={form.secondaryContact}
+                defaultCode="IN"
+                layout="first"
+                onChangeFormattedText={(text: string) => {
+                  handleChange("secondaryContact", text);
+                }}
+                containerStyle={styles.phoneContainer}
+                textContainerStyle={styles.phoneTextContainer}
+                withDarkTheme
+                withShadow
+                textInputProps={{ maxLength: 10 }}
               />
 
               <TextInput
@@ -302,4 +371,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   loginLink: { color: PRIMARY, fontWeight: "bold" },
+  phoneContainer: {
+    width: "100%",
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#79747E",
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    height: 56,
+  },
+  phoneTextContainer: {
+    backgroundColor: "#fff",
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+    paddingVertical: 0,
+  },
 });

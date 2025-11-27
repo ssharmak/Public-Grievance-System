@@ -93,6 +93,15 @@ export default function LoginScreen({ navigation }: any) {
               left={<TextInput.Icon icon="lock" />}
             />
 
+            <TouchableOpacity
+              onPress={() => navigation.navigate("ForgotPassword")}
+              style={{ alignSelf: "flex-end", marginBottom: 16 }}
+            >
+              <Text style={{ color: PRIMARY, fontWeight: "600" }}>
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
+
             <Button
               mode="contained"
               onPress={handleLogin}

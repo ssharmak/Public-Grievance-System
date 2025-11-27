@@ -13,7 +13,7 @@ import { getMyProfile } from "../services/userService";
 
 export default function HomeScreen({ navigation }: any) {
   // Card animation
-  const scaleAnim = new Animated.Value(1);
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
   const animateCard = () => {
     Animated.sequence([
       Animated.timing(scaleAnim, {

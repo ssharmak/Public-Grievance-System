@@ -73,6 +73,15 @@ const DashboardPage = () => {
         <div className="card">
           <div className="flex justify-between items-start">
             <div>
+              <p className="text-sm text-gray">In Progress</p>
+              <h3 className="text-2xl">{stats.inProgress || 0}</h3>
+            </div>
+            <Clock color="#1E88E5" />
+          </div>
+        </div>
+        <div className="card">
+          <div className="flex justify-between items-start">
+            <div>
               <p className="text-sm text-gray">Resolved</p>
               <h3 className="text-2xl">{stats.resolved}</h3>
             </div>
@@ -82,8 +91,8 @@ const DashboardPage = () => {
         <div className="card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm text-gray">My Dept Pending</p>
-              <h3 className="text-2xl">{stats.myDepartmentPending}</h3>
+              <p className="text-sm text-gray">Rejected</p>
+              <h3 className="text-2xl">{stats.rejected || 0}</h3>
             </div>
             <AlertCircle color="var(--danger-color)" />
           </div>

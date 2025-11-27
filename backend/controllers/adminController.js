@@ -19,12 +19,14 @@ export const getGrievanceSummary = async (req, res) => {
 
     const total = await Grievance.countDocuments(filter);
     const resolved = await Grievance.countDocuments({ ...filter, status: 'Resolved' });
+    const rejected = await Grievance.countDocuments({ ...filter, status: 'Rejected' });
+    const inProgress = await Grievance.countDocuments({ ...filter, status: 'In Progress' });
     const pending = await Grievance.countDocuments({ 
       ...filter, 
-      status: { $in: ['Submitted', 'In Review', 'Assigned', 'Pending', 'In Progress'] } 
+      status: { $in: ['Submitted', 'In Review', 'Assigned', 'Pending'] } 
     });
     
-    console.log(`[Admin] Summary Result: Total=${total}, Pending=${pending}`);
+    console.log(`[Admin] Summary Result: Total=${total}, Pending=${pending}, Rejected=${rejected}, InProgress=${inProgress}`);
 
     const myDepartmentPending = pending; 
 
@@ -32,6 +34,8 @@ export const getGrievanceSummary = async (req, res) => {
       total,
       pending,
       resolved,
+      rejected,
+      inProgress,
       myDepartmentPending
     });
   } catch (error) {

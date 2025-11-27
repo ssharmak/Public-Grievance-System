@@ -4,8 +4,8 @@ import { body } from "express-validator";
 import {
   register,
   login,
-  forgotPassword,
-  resetPassword,
+  forgotPasswordOtp,
+  resetPasswordWithOtp,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -47,7 +47,24 @@ router.post(
   login
 );
 
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+// Forgot Password OTP
+router.post(
+  "/forgot-password-otp",
+  [body("primaryContact").notEmpty().withMessage("Primary contact required")],
+  forgotPasswordOtp
+);
+
+// Reset Password with OTP
+router.post(
+  "/reset-password-otp",
+  [
+    body("primaryContact").notEmpty().withMessage("Primary contact required"),
+    body("otp").notEmpty().withMessage("OTP is required"),
+    body("newPassword")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters"),
+  ],
+  resetPasswordWithOtp
+);
 
 export default router;

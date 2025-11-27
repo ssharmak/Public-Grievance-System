@@ -5,6 +5,9 @@ export const submitGrievance = async (formData: FormData) => {
     headers: {
       "Content-Type": "multipart/form-data",
     },
+    transformRequest: (data, headers) => {
+      return data; // Prevent Axios from stringifying FormData
+    },
   });
   return res.data;
 };

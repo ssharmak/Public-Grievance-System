@@ -43,6 +43,8 @@ const userSchema = new mongoose.Schema(
     pushToken: { type: String, unique: true, sparse: true, default: null },
     managedCategories: [{ type: String, default: [] }],
     isActive: { type: Boolean, default: true },
+    resetPasswordOtp: { type: String, default: null },
+    resetPasswordOtpExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );

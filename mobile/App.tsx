@@ -13,6 +13,7 @@ import TrackGrievancesScreen from "./screens/TrackGrievancesScreen";
 import GrievanceHistoryScreen from "./screens/GrievanceHistoryScreen";
 import GrievanceDetailsScreen from "./screens/GrievanceDetailsScreen";
 import ProfileScreen from "./screens/ProfileScreen";
+import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -45,6 +46,7 @@ export default function App() {
             component={GrievanceDetailsScreen}
           />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>

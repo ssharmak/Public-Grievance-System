@@ -129,26 +129,74 @@ export const login = async (req, res) => {
   }
 };
 
-export const forgotPassword = async (req, res) => {
+import { sendSMS } from "../utils/smsService.js";
+
+export const forgotPasswordOtp = async (req, res) => {
   try {
-    const { email } = req.body;
-    // Placeholder logic
-    console.log(`Forgot password requested for: ${email}`);
-    res.json({ message: "If that email exists, a reset link has been sent." });
+    const { primaryContact } = req.body;
+
+    // Ensure +91 prefix if missing (basic check, though frontend handles it)
+    const formattedContact = primaryContact.startsWith('+') ? primaryContact : `+91${primaryContact}`;
+
+    const user = await User.findOne({ primaryContact: formattedContact });
+    if (!user) {
+      return res.status(404).json({ message: "User with this contact number not found" });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Set expiry (e.g., 10 minutes)
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.resetPasswordOtp = otp;
+    user.resetPasswordOtpExpires = expires;
+    await user.save();
+
+    // Send SMS
+    const message = `Your OTP for password reset is ${otp}. Valid for 10 minutes.`;
+    await sendSMS(user.primaryContact, message);
+
+    res.json({ message: "OTP sent to your registered mobile number." });
   } catch (err) {
-    console.error("FORGOT PASSWORD ERROR:", err);
+    console.error("FORGOT PASSWORD OTP ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-export const resetPassword = async (req, res) => {
+export const resetPasswordWithOtp = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
-    // Placeholder logic
-    console.log(`Reset password with token: ${token}`);
-    res.json({ message: "Password has been reset successfully." });
+    const { primaryContact, otp, newPassword } = req.body;
+
+    const formattedContact = primaryContact.startsWith('+') ? primaryContact : `+91${primaryContact}`;
+
+    const user = await User.findOne({
+      primaryContact: formattedContact,
+      resetPasswordOtp: otp,
+      resetPasswordOtpExpires: { $gt: Date.now() }, // Check if not expired
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    
+    // Clear OTP fields
+    user.resetPasswordOtp = null;
+    user.resetPasswordOtpExpires = null;
+    await user.save();
+
+    // Send confirmation SMS
+    const timestamp = new Date().toLocaleString();
+    const confirmMessage = `Your password was successfully changed on ${timestamp}. If this wasn't you, contact support immediately.`;
+    await sendSMS(user.primaryContact, confirmMessage);
+
+    res.json({ message: "Password reset successfully. Please login with your new password." });
   } catch (err) {
-    console.error("RESET PASSWORD ERROR:", err);
+    console.error("RESET PASSWORD OTP ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

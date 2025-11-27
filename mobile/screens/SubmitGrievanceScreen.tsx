@@ -59,7 +59,7 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
         type: "*/*",
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
         setAttachments([...attachments, file]);
       }
@@ -132,10 +132,120 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
         <Appbar.Content title="New Grievance" />
       </Appbar.Header>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
-      >
+      {Platform.OS === "ios" ? (
+        <KeyboardAvoidingView
+          behavior="padding"
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={64}
+        >
+          <ScrollView contentContainerStyle={styles.container}>
+            <Card style={styles.card}>
+              <Card.Content>
+                <TextInput
+                  mode="outlined"
+                  label="Title"
+                  placeholder="Short and clear title"
+                  value={title}
+                  onChangeText={setTitle}
+                  style={styles.input}
+                />
+
+                <Text style={styles.label}>Category</Text>
+                <View style={styles.pickerBox}>
+                  {catsLoading ? (
+                    <ActivityIndicator size="small" style={{ padding: 14 }} />
+                  ) : (
+                    <Picker
+                      selectedValue={categoryId}
+                      onValueChange={(v) => setCategoryId(v)}
+                      mode="dropdown"
+                      style={{ backgroundColor: "#fff" }}
+                    >
+                      <Picker.Item label="Select category" value="" />
+                      {categories.map((c) => (
+                        <Picker.Item key={c._id} label={c.name} value={c._id} />
+                      ))}
+                    </Picker>
+                  )}
+                </View>
+
+                <Text style={styles.label}>Priority</Text>
+                <View style={styles.pickerBox}>
+                  <Picker
+                    selectedValue={priority}
+                    onValueChange={(v) => setPriority(v)}
+                    mode="dropdown"
+                    style={{ backgroundColor: "#fff" }}
+                  >
+                    <Picker.Item label="Low" value="Low" />
+                    <Picker.Item label="Medium" value="Medium" />
+                    <Picker.Item label="High" value="High" />
+                  </Picker>
+                </View>
+
+                <TextInput
+                  mode="outlined"
+                  label="Location (optional)"
+                  placeholder="Nearby landmark"
+                  value={location}
+                  onChangeText={setLocation}
+                  style={styles.input}
+                />
+
+                <TextInput
+                  mode="outlined"
+                  label="Description"
+                  multiline
+                  numberOfLines={5}
+                  placeholder="Describe the issue"
+                  value={description}
+                  onChangeText={setDescription}
+                  style={[styles.input, { textAlignVertical: "top" }]}
+                />
+
+                <View style={styles.anonRow}>
+                  <Text style={styles.label}>Submit Anonymously</Text>
+                  <Switch
+                    value={isAnonymous}
+                    onValueChange={setIsAnonymous}
+                    color={PRIMARY}
+                  />
+                </View>
+
+                <Divider style={{ marginVertical: 12 }} />
+
+                <View style={styles.attachmentRow}>
+                  <Text style={styles.label}>Attachments</Text>
+                  <IconButton icon="paperclip" size={22} onPress={pickDocument} />
+                </View>
+
+                {attachments.map((a, i) => (
+                  <View key={i} style={styles.attachmentItem}>
+                    <Text style={{ flex: 1 }} numberOfLines={1}>
+                      {a.name}
+                    </Text>
+                    <IconButton
+                      icon="close"
+                      size={18}
+                      onPress={() => removeAttachment(i)}
+                    />
+                  </View>
+                ))}
+
+                <Button
+                  mode="contained"
+                  loading={loading}
+                  style={styles.submitButton}
+                  onPress={handleSubmit}
+                  buttonColor={PRIMARY}
+                >
+                  Submit Grievance
+                </Button>
+              </Card.Content>
+            </Card>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      ) : (
         <ScrollView contentContainerStyle={styles.container}>
           <Card style={styles.card}>
             <Card.Content>
@@ -242,7 +352,7 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
             </Card.Content>
           </Card>
         </ScrollView>
-      </KeyboardAvoidingView>
+      )}
     </View>
   );
 }

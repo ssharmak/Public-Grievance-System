@@ -28,3 +28,13 @@ export const register = async (payload: any) => {
 export const logout = async () => {
   await AsyncStorage.removeItem("token");
 };
+
+export const requestPasswordResetOtp = async (primaryContact: string) => {
+  const res = await api.post("/auth/forgot-password-otp", { primaryContact });
+  return res.data;
+};
+
+export const resetPasswordWithOtp = async (payload: any) => {
+  const res = await api.post("/auth/reset-password-otp", payload);
+  return res.data;
+};
