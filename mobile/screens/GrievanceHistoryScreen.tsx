@@ -93,7 +93,7 @@ export default function GrievanceHistoryScreen({ navigation }: any) {
 
                       <View style={styles.row}>
                         <Text style={styles.dateText}>
-                          📅 {new Date(item.createdAt).toDateString()}
+                          📅 {new Date(item.createdAt).toLocaleString()}
                         </Text>
 
                         <Chip

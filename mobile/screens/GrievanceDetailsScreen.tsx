@@ -83,7 +83,7 @@ export default function GrievanceDetailsScreen({ route, navigation }: any) {
               </Chip>
             </View>
             <Text style={styles.date}>
-              Submitted on {new Date(g.createdAt).toDateString()}
+              Submitted on {new Date(g.createdAt).toLocaleString()}
             </Text>
           </Card.Content>
         </Card>
