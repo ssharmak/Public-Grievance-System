@@ -147,7 +147,13 @@ const GrievanceDetailsPage = () => {
                 grievance.attachments.map((file, idx) => (
                   <div key={idx} className="flex justify-between items-center" style={{ padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius)' }}>
                     <span className="text-sm">{file.split('/').pop()}</span>
-                    <a href={`http://localhost:5000${file}`} target="_blank" rel="noreferrer" className="btn btn-secondary text-sm" style={{ textDecoration: 'none' }}>
+                    <a 
+                      href={file.startsWith('http') ? file : `http://localhost:5000${file.startsWith('/') ? '' : '/'}${file}`} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="btn btn-secondary text-sm" 
+                      style={{ textDecoration: 'none' }}
+                    >
                       <Download size={14} style={{ marginRight: '4px' }} /> View
                     </a>
                   </div>

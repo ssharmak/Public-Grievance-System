@@ -4,6 +4,35 @@ import User from "../models/User.js";
 import StatusHistory from "../models/StatusHistory.js";
 import Notification from "../models/Notification.js";
 import { createAndSendNotification } from "../utils/notificationService.js";
+import s3Client from "../config/s3Client.js";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+const signAttachment = async (url) => {
+  if (!url || !url.startsWith("http")) return url;
+  try {
+    // Simple check: if it contains the bucket name, assume it's S3
+    // This handles both virtual-hosted-style and path-style
+    if (url.includes(process.env.AWS_BUCKET_NAME)) {
+       // Extract Key. 
+       // Strategy: The key is everything after the bucket domain or bucket path.
+       // A safer way given we know the structure "grievances/..."
+       const parts = url.split("grievances/");
+       if (parts.length > 1) {
+         const key = "grievances/" + parts[1];
+         const command = new GetObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: key,
+         });
+         return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+       }
+    }
+    return url;
+  } catch (e) {
+    console.error("Error signing URL:", e);
+    return url;
+  }
+};
 
 const generateGrievanceId = () =>
   "PGS-" +
@@ -189,7 +218,12 @@ export const getSingleGrievance = async (req, res) => {
       return res.status(404).json({ message: "Grievance not found" });
     }
 
-    res.json(found);
+    const gObj = found.toObject();
+    if (gObj.attachments && gObj.attachments.length > 0) {
+      gObj.attachments = await Promise.all(gObj.attachments.map(signAttachment));
+    }
+
+    res.json(gObj);
   } catch (err) {
     console.error("GET SINGLE GRIEVANCE ERROR:", err);
     res.status(500).json({ message: "Server error" });
@@ -245,7 +279,12 @@ export const adminGetOne = async (req, res) => {
       .populate("changedBy", "firstName lastName email")
       .sort({ createdAt: -1 });
 
-    res.json({ grievance: g, history });
+    const gObj = g.toObject();
+    if (gObj.attachments && gObj.attachments.length > 0) {
+      gObj.attachments = await Promise.all(gObj.attachments.map(signAttachment));
+    }
+
+    res.json({ grievance: gObj, history });
   } catch (err) {
     console.error("ADMIN GET ONE ERROR:", err);
     res.status(500).json({ message: "Server error" });

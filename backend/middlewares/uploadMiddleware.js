@@ -1,16 +1,10 @@
 import multer from "multer";
-import { S3Client } from "@aws-sdk/client-s3";
+import s3Client from "../config/s3Client.js";
 import multerS3 from "multer-s3";
 import path from "path";
 
-// Configure AWS S3
-const s3 = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+// Configure AWS S3 - using shared client
+const s3 = s3Client;
 
 const upload = multer({
   storage: multerS3({
