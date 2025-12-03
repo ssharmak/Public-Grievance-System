@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { fetchGrievances } from '../services/adminService';
-import { Search, ChevronRight } from 'lucide-react';
+import { Search, ChevronRight, ArrowLeft } from 'lucide-react';
 
 const UI_STATUS_MAP = {
   'Pending': 'badge-pending',
@@ -42,7 +42,9 @@ const GrievanceQueuePage = () => {
 
   return (
     <div className="container">
-      <div className="flex justify-between items-center mb-6">
+      <Link to="/admin/dashboard" className="btn btn-secondary mb-4" style={{ display: 'inline-flex', alignItems: 'center', width: 'fit-content' }}>
+        <ArrowLeft size={16} style={{ marginRight: '8px' }} /> Back </Link>
+      <div className="flex justiy-between items-center mb-6">
         <h1 className="text-2xl">Grievance Queue</h1>
         <div className="flex gap-4">
           <div className="flex items-center" style={{ position: 'relative' }}>

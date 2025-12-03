@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { Text, TextInput, Button, Card } from "react-native-paper";
 import { login } from "../services/authService";
-// Push notification imports removed
 
 const PRIMARY = "#1E88E5";
 
