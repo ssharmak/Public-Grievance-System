@@ -19,6 +19,13 @@ const generateToken = (user) => {
   );
 };
 
+// Helper to format phone number
+const formatPhone = (phone) => {
+  if (!phone) return phone;
+  if (phone.startsWith('+')) return phone;
+  return `+91${phone}`;
+};
+
 export const register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -26,14 +33,6 @@ export const register = async (req, res) => {
   }
 
   try {
-    // Helper to format phone number
-    const formatPhone = (phone) => {
-      if (!phone) return phone;
-      if (phone.startsWith('+')) return phone;
-      return `+91${phone}`;
-    };
-
-    // Re-writing the destructuring block to include secondaryContact
     const {
       firstName,
       middleName,
@@ -99,16 +98,28 @@ export const login = async (req, res) => {
 
   try {
     const { emailOrPhone, password } = req.body;
+    console.log("LOGIN ATTEMPT:", emailOrPhone);
+
+    const possiblePhone = formatPhone(emailOrPhone);
 
     const user = await User.findOne({
-      $or: [{ email: emailOrPhone }, { primaryContact: emailOrPhone }],
+      $or: [
+        { email: emailOrPhone },
+        { primaryContact: emailOrPhone },
+        { primaryContact: possiblePhone },
+      ],
     });
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      console.log("User not found for:", emailOrPhone);
+      return res.status(404).json({ message: "User not found" });
+    }
 
     const validPass = await bcrypt.compare(password, user.password);
-    if (!validPass)
+    if (!validPass) {
+      console.log("Invalid password for:", user.email);
       return res.status(401).json({ message: "Invalid credentials" });
+    }
 
     const token = generateToken(user);
 
