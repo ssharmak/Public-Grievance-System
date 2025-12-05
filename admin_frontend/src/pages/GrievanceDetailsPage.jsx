@@ -148,7 +148,7 @@ const GrievanceDetailsPage = () => {
                   <div key={idx} className="flex justify-between items-center" style={{ padding: '0.5rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius)' }}>
                     <span className="text-sm">{file.split('/').pop()}</span>
                     <a 
-                      href={file.startsWith('http') ? file : `http://3.111.37.63:5000${file.startsWith('/') ? '' : '/'}${file}`} 
+                      href={file.startsWith('http') ? file : `http://13.201.75.180:5000${file.startsWith('/') ? '' : '/'}${file}`} 
                       target="_blank" 
                       rel="noreferrer" 
                       className="btn btn-secondary text-sm" 
