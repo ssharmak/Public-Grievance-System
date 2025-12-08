@@ -13,14 +13,19 @@ const DashboardPage = () => {
     myDepartmentPending: 0
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
+        setError(null);
+        console.log("Fetching summary from API...");
         const data = await fetchSummary();
+        console.log("Summary data received:", data);
         setStats(data);
       } catch (error) {
         console.error("Failed to fetch summary", error);
+        setError(error.message || "Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -29,6 +34,29 @@ const DashboardPage = () => {
   }, []);
 
   if (loading) return <div className="container">Loading dashboard...</div>;
+  if (error) return (
+    <div className="container" style={{ padding: '2rem' }}>
+      <div className="alert alert-danger">
+        <h3>Connection Error</h3>
+        <p>{error}</p>
+        <p className="text-sm mt-2">Possible reasons:</p>
+        <ul className="list-disc ml-6 text-sm">
+          <li>Backend is unreachable (Check VPN/Internet)</li>
+          <li>Session expired (Try logging out)</li>
+          <li>CORS issue (Check browser console)</li>
+        </ul>
+        <button 
+          className="btn btn-primary mt-4" 
+          onClick={() => {
+            localStorage.clear();
+            window.location.href = '/login';
+          }}
+        >
+          Force Logout & Retry
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="container">
