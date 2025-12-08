@@ -1,3 +1,10 @@
+/**
+ * @file RegisterScreen.tsx
+ * @description Registration screen for new Citizen accounts.
+ * Collects Personal Info, Contact Details, and Password.
+ * Features validation for phone numbers (Strict 10-digit Indian format) and password strength.
+ */
+
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -52,12 +59,21 @@ export default function RegisterScreen({ navigation }: any) {
     if (selectedDate) setForm({ ...form, dob: selectedDate });
   };
 
+  /**
+   * Helper: Strong Password Validation
+   * Min 8 chars, 1 letter, 1 number, 1 special char.
+   */
   const validatePassword = (p: string) =>
     p.length >= 8 &&
     /[A-Za-z]/.test(p) &&
     /[0-9]/.test(p) &&
     /[!@#$%^&*]/.test(p);
 
+  /**
+   * Handle Registration Submission
+   * Validates all fields, numbers, and password consistency.
+   * Calls API and redirects to Login/Home on success.
+   */
   const handleRegister = async () => {
     if (!form.firstName || !form.lastName || !form.gender || !form.dob) {
       return Alert.alert("Missing Fields", "Please fill all required fields");
@@ -70,10 +86,8 @@ export default function RegisterScreen({ navigation }: any) {
     const primaryCode = phoneInput.current?.getCountryCode();
     const isPrimaryValid = phoneInput.current?.isValidNumber(form.primaryContact);
     
-    // Strict 10-digit check for India
+    // Strict 10-digit check for India (+91 + 10 digits = 13 chars)
     if (primaryCode === 'IN') {
-       // form.primaryContact includes country code (e.g., +919876543210). 
-       // Length should be 13 (+91 + 10 digits).
        if (form.primaryContact.length !== 13) {
           return Alert.alert("Invalid Contact", "Primary contact must be exactly 10 digits");
        }

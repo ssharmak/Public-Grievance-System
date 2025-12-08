@@ -1,5 +1,16 @@
+/**
+ * @file profileController.js
+ * @description Controller for managing user profiles.
+ * Handles fetching and updating current user's personal information.
+ */
+
 import User from "../models/User.js";
 
+/**
+ * Get current user's profile.
+ * Excludes sensitive fields like password.
+ * @route GET /api/profile/me
+ */
 export const getMyProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -11,6 +22,11 @@ export const getMyProfile = async (req, res) => {
   }
 };
 
+/**
+ * Update current user's profile.
+ * Filters input to only allow editing relevant fields (contact, address, etc.).
+ * @route PUT /api/profile/update
+ */
 export const updateMyProfile = async (req, res) => {
   try {
     const allowed = [
@@ -24,7 +40,8 @@ export const updateMyProfile = async (req, res) => {
       "email",
       "address",
     ];
-    // sanitize incoming payload
+    
+    // Sanitize incoming payload to prevent overwriting restricted fields (like role)
     const payload = {};
     for (const k of allowed)
       if (req.body[k] !== undefined) payload[k] = req.body[k];
@@ -32,6 +49,7 @@ export const updateMyProfile = async (req, res) => {
     const updated = await User.findByIdAndUpdate(req.user.id, payload, {
       new: true,
     }).select("-password");
+    
     return res.json(updated);
   } catch (err) {
     console.log("UPDATE PROFILE ERROR", err);

@@ -1,10 +1,20 @@
+/**
+ * @file authController.js
+ * @description Handles user authentication and authorization logic.
+ * Includes registration, login, password reset (OTP), and phone verification.
+ */
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { validationResult } from "express-validator";
 import { sendSMS } from "../utils/smsService.js";
 
-// Generate Token Helper
+/**
+ * Generates a JSON Web Token (JWT) for the authenticated user.
+ * @param {Object} user - The user document
+ * @returns {string} Signed JWT token
+ */
 const generateToken = (user) => {
   return jwt.sign(
     {
@@ -19,13 +29,22 @@ const generateToken = (user) => {
   );
 };
 
-// Helper to format phone number
+/**
+ * Formats a phone number to include the country code (+91) if missing.
+ * @param {string} phone - Input phone number
+ * @returns {string} Formatted phone number
+ */
 const formatPhone = (phone) => {
   if (!phone) return phone;
   if (phone.startsWith('+')) return phone;
   return `+91${phone}`;
 };
 
+/**
+ * Register a new user (Citizen).
+ * Validates input, checks for existing users, hashes password, and creates a new User record.
+ * @route POST /api/auth/register
+ */
 export const register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -91,6 +110,11 @@ export const register = async (req, res) => {
   }
 };
 
+/**
+ * Authenticate user and return a token.
+ * Supports login via Email or Phone Number.
+ * @route POST /api/auth/login
+ */
 export const login = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty())
@@ -98,7 +122,6 @@ export const login = async (req, res) => {
 
   try {
     const { emailOrPhone, password } = req.body;
-    console.log("LOGIN ATTEMPT:", emailOrPhone);
 
     const possiblePhone = formatPhone(emailOrPhone);
 
@@ -111,13 +134,11 @@ export const login = async (req, res) => {
     });
 
     if (!user) {
-      console.log("User not found for:", emailOrPhone);
       return res.status(404).json({ message: "User not found" });
     }
 
     const validPass = await bcrypt.compare(password, user.password);
     if (!validPass) {
-      console.log("Invalid password for:", user.email);
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -141,12 +162,14 @@ export const login = async (req, res) => {
   }
 };
 
-
+/**
+ * Initiate Password Reset via OTP.
+ * Generates an OTP and sends it via SMS to the user's primary contact.
+ * @route POST /api/auth/forgot-password-otp
+ */
 export const forgotPasswordOtp = async (req, res) => {
   try {
     const { primaryContact } = req.body;
-
-    // Ensure +91 prefix if missing (basic check, though frontend handles it)
     const formattedContact = primaryContact.startsWith('+') ? primaryContact : `+91${primaryContact}`;
 
     const user = await User.findOne({ primaryContact: formattedContact });
@@ -154,17 +177,13 @@ export const forgotPasswordOtp = async (req, res) => {
       return res.status(404).json({ message: "User with this contact number not found" });
     }
 
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Set expiry (e.g., 10 minutes)
-    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     user.resetPasswordOtp = otp;
     user.resetPasswordOtpExpires = expires;
     await user.save();
 
-    // Send SMS
     const message = `Your OTP for password reset is ${otp}. Valid for 10 minutes.`;
     await sendSMS(user.primaryContact, message);
 
@@ -175,23 +194,26 @@ export const forgotPasswordOtp = async (req, res) => {
   }
 };
 
+/**
+ * Complete Password Reset.
+ * Verifies the OTP and updates the user's password.
+ * @route POST /api/auth/reset-password-otp
+ */
 export const resetPasswordWithOtp = async (req, res) => {
   try {
     const { primaryContact, otp, newPassword } = req.body;
-
     const formattedContact = primaryContact.startsWith('+') ? primaryContact : `+91${primaryContact}`;
 
     const user = await User.findOne({
       primaryContact: formattedContact,
       resetPasswordOtp: otp,
-      resetPasswordOtpExpires: { $gt: Date.now() }, // Check if not expired
+      resetPasswordOtpExpires: { $gt: Date.now() },
     });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     
@@ -200,7 +222,6 @@ export const resetPasswordWithOtp = async (req, res) => {
     user.resetPasswordOtpExpires = null;
     await user.save();
 
-    // Send confirmation SMS
     const timestamp = new Date().toLocaleString();
     const confirmMessage = `Your password was successfully changed on ${timestamp}. If this wasn't you, contact support immediately.`;
     await sendSMS(user.primaryContact, confirmMessage);
@@ -212,9 +233,13 @@ export const resetPasswordWithOtp = async (req, res) => {
   }
 };
 
+/**
+ * Send Phone Verification OTP.
+ * Generates an OTP for confirming the user's phone number.
+ * @route POST /api/auth/phone-verification-otp
+ */
 export const sendPhoneVerificationOtp = async (req, res) => {
   try {
-    // User ID comes from auth middleware
     const userId = req.user.id;
     const user = await User.findById(userId);
 
@@ -226,17 +251,13 @@ export const sendPhoneVerificationOtp = async (req, res) => {
       return res.status(400).json({ message: "Phone number already verified" });
     }
 
-    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Set expiry (10 minutes)
     const expires = new Date(Date.now() + 10 * 60 * 1000);
 
     user.phoneVerificationOtp = otp;
     user.phoneVerificationOtpExpires = expires;
     await user.save();
 
-    // Send SMS
     const message = `Your OTP for phone verification is ${otp}. Valid for 10 minutes.`;
     await sendSMS(user.primaryContact, message);
 
@@ -247,6 +268,11 @@ export const sendPhoneVerificationOtp = async (req, res) => {
   }
 };
 
+/**
+ * Verify Phone OTP.
+ * Marks the user's phone number as verified if OTP matches.
+ * @route POST /api/auth/verify-phone-otp
+ */
 export const verifyPhoneOtp = async (req, res) => {
   try {
     const userId = req.user.id;

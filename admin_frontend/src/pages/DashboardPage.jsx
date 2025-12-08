@@ -1,3 +1,9 @@
+/**
+ * @file DashboardPage.jsx
+ * @description Main landing page for the Admin Panel.
+ * Displays high-level statistics (Total, Pending, Resolved) and navigation shortcuts.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -6,15 +12,22 @@ import { LayoutDashboard, List, Settings, CheckCircle, Clock, AlertCircle } from
 
 const DashboardPage = () => {
   const { user, isSuperAdmin } = useAuth();
+  
+  // State for dashboard statistics
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
     resolved: 0,
     myDepartmentPending: 0
   });
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  /**
+   * Effect: Load Dashboard Data
+   * Fetches summary statistics from the backend on component mount.
+   */
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -33,7 +46,10 @@ const DashboardPage = () => {
     loadData();
   }, []);
 
+  // Loading State
   if (loading) return <div className="container">Loading dashboard...</div>;
+
+  // Error State with Force Logout option
   if (error) return (
     <div className="container" style={{ padding: '2rem' }}>
       <div className="alert alert-danger">
@@ -60,6 +76,7 @@ const DashboardPage = () => {
 
   return (
     <div className="container">
+      {/* Header Section */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl">Dashboard</h1>
@@ -79,6 +96,7 @@ const DashboardPage = () => {
         </div>
       </div>
 
+      {/* Statistics Cards Grid */}
       <div className="grid-cols-4 mb-6">
         <div className="card">
           <div className="flex justify-between items-start">

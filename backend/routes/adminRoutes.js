@@ -1,3 +1,9 @@
+/**
+ * @file adminRoutes.js
+ * @description Routing for Admin and Official portal operations.
+ * Includes dashboard summaries, grievance management, and assignment logic.
+ */
+
 import express from 'express';
 import { verifyToken, verifyRole } from '../middlewares/authMiddleware.js';
 import {
@@ -12,29 +18,50 @@ import { adminGetOne } from '../controllers/grievanceController.js';
 
 const router = express.Router();
 
-// All routes require authentication and admin/official/superadmin role
+// Middleware: All admin routes require Authentication and appropriate Role
 router.use(verifyToken);
 router.use(verifyRole(['admin', 'superadmin', 'official', 'staff']));
 
-// Summary Dashboard - REMOVED checkDepartmentAccess for ALL grievances visibility
+/**
+ * @route GET /api/admin/grievances/summary
+ * @desc Get dashboard statistics (total, pending, resolved counts).
+ */
 router.get('/grievances/summary', getGrievanceSummary);
 
-// List all (filtered) - REMOVED checkDepartmentAccess for ALL grievances visibility
+/**
+ * @route GET /api/admin/grievances/all
+ * @desc Retrieve all grievances (sorted by newest).
+ */
 router.get('/grievances/all', getAllGrievances);
 
-// Single Grievance Details - REMOVED checkDepartmentAccess for ALL details visibility
+/**
+ * @route GET /api/admin/grievance/:id
+ * @desc Get detailed view of a specific grievance.
+ */
 router.get('/grievance/:id', adminGetOne);
 
-// Update Status (Keeping checkDepartmentAccess for action/modification control)
+/**
+ * @route PUT /api/admin/:grievanceId/status
+ * @desc Update the status of a grievance.
+ */
 router.put('/:grievanceId/status', updateGrievanceStatus);
 
-// Add Comment (Keeping checkDepartmentAccess for action/modification control)
+/**
+ * @route POST /api/admin/:grievanceId/comment
+ * @desc Add an internal comment to a grievance.
+ */
 router.post('/:grievanceId/comment', addComment);
 
-// Get Officials (for assignment)
+/**
+ * @route GET /api/admin/users/officials
+ * @desc Get list of officials for assignment dropdowns.
+ */
 router.get('/users/officials', getOfficials);
 
-// Assign Official
+/**
+ * @route POST /api/admin/:grievanceId/assign
+ * @desc Assign a grievance to a specific official.
+ */
 router.post('/:grievanceId/assign', assignOfficial);
 
 export default router;

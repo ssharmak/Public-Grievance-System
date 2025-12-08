@@ -1,3 +1,10 @@
+/**
+ * @file SubmitGrievanceScreen.tsx
+ * @description Form screen for submitting a new grievance.
+ * Handles inputs for Title, Category, Priority, Location, Description, and File Attachments.
+ * Supports anonymous submission and strict validation of inputs.
+ */
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -78,6 +85,11 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
     ));
   }, [categories]);
 
+  /**
+   * File Picker Handler
+   * Allows selection of documents (Images/PDFs).
+   * Enforces 10MB size limit and checks for duplicates.
+   */
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -124,6 +136,11 @@ export default function SubmitGrievanceScreen({ navigation }: any) {
     return true;
   };
 
+  /**
+   * Handle Form Submission
+   * Constructs FormData, validates file counts (max 5 photos, 1 PDF),
+   * sends data to backend, and redirects to history on success.
+   */
   const handleSubmit = async () => {
     if (!validate()) return;
 

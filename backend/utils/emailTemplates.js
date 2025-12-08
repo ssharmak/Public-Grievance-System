@@ -1,6 +1,20 @@
-// Email templates for different notification types
+/**
+ * @file emailTemplates.js
+ * @description Collection of HTML email templates for various system notifications.
+ * Includes templates for Grievance Submission, Status Updates, and Generic messages.
+ * Each template function returns an object containing the subject, HTML body, and plain text version.
+ */
 
 export const emailTemplates = {
+  /**
+   * Template for Grievance Submission confirmation.
+   * 
+   * @param {Object} data - Data to populate the template.
+   * @param {string} data.userName - Name of the user submitting the grievance.
+   * @param {string} data.grievanceId - The unique ID of the grievance.
+   * @param {string} data.title - Title of the grievance.
+   * @returns {Object} Email object with subject, html, and text.
+   */
   grievanceSubmitted: (data) => {
     const { userName, grievanceId, title } = data;
     return {
@@ -63,9 +77,20 @@ Thank you for using the Public Grievance System.
     };
   },
 
+  /**
+   * Template for Grievance Status Updates.
+   * 
+   * @param {Object} data - Data to populate the template.
+   * @param {string} data.userName - Name of the user.
+   * @param {string} data.grievanceId - The unique ID of the grievance.
+   * @param {string} data.oldStatus - The previous status.
+   * @param {string} data.newStatus - The new status.
+   * @returns {Object} Email object with subject, html, and text.
+   */
   statusUpdate: (data) => {
     const { userName, grievanceId, oldStatus, newStatus } = data;
     
+    // Color mapping for status badges
     const statusColors = {
       "Submitted": "#1E88E5",
       "In Review": "#FB8C00",
@@ -138,6 +163,15 @@ Thank you for your patience.
     };
   },
 
+  /**
+   * Generic Notification Template.
+   * 
+   * @param {Object} data - Data to populate the template.
+   * @param {string} data.userName - Name of the user.
+   * @param {string} data.title - Title of the notification.
+   * @param {string} data.message - Main message content.
+   * @returns {Object} Email object with subject, html, and text.
+   */
   generic: (data) => {
     const { userName, title, message } = data;
     return {

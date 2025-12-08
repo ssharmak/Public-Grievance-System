@@ -1,3 +1,10 @@
+/**
+ * @file ForgotPasswordScreen.tsx
+ * @description Screen for resetting a forgotten password securely via OTP.
+ * Step 1: Request OTP by providing registered mobile number.
+ * Step 2: Verify OTP and set a new password.
+ */
+
 import React, { useState, useRef } from "react";
 import {
   View,
@@ -35,6 +42,9 @@ export default function ForgotPasswordScreen({ navigation }: any) {
 
   const phoneInput = useRef<PhoneInput>(null);
 
+  /**
+   * Step 1: Validation and OTP Request
+   */
   const handleRequestOtp = async () => {
     if (!primaryContact) {
       return Alert.alert("Error", "Please enter your registered mobile number");
@@ -67,6 +77,9 @@ export default function ForgotPasswordScreen({ navigation }: any) {
     }
   };
 
+  /**
+   * Step 2: Password Reset Confirmation
+   */
   const handleResetPassword = async () => {
     if (!otp || !newPassword || !confirmPassword) {
       return Alert.alert("Error", "Please fill all fields");

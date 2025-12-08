@@ -1,3 +1,10 @@
+/**
+ * @file LoginScreen.tsx
+ * @description Login screen for Mobile Users (Citizens).
+ * Authenticates against the backend and stores the JWT token.
+ * Redirects to Home screen upon success.
+ */
+
 import React, { useState } from "react";
 import {
   View,
@@ -6,7 +13,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from "react-native";
 import { Text, TextInput, Button, Card } from "react-native-paper";
 import { login } from "../services/authService";
@@ -19,6 +25,10 @@ export default function LoginScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [secureText, setSecureText] = useState(true);
 
+  /**
+   * Handle Login Action
+   * Validates input, calls API, and manages navigation.
+   */
   const handleLogin = async () => {
     if (!emailOrPhone.trim() || !password) {
       Alert.alert("Validation", "Please enter your email/phone and password");
@@ -30,8 +40,7 @@ export default function LoginScreen({ navigation }: any) {
       const res = await login({ emailOrPhone: emailOrPhone.trim(), password });
 
       if (res.token) {
-        // Push notification registration removed
-
+        // Reset navigation stack to prevent going back to Login
         navigation.reset({
           index: 0,
           routes: [{ name: "Home" }],

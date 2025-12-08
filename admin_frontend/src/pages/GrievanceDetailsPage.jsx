@@ -1,3 +1,9 @@
+/**
+ * @file GrievanceDetailsPage.jsx
+ * @description Detailed view of a single grievance.
+ * Allows officials to view details, update status, add comments, download attachments, and assign to other officials.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -8,6 +14,8 @@ const GrievanceDetailsPage = () => {
   const { grievanceId } = useParams();
   const navigate = useNavigate();
   const { isOfficial } = useAuth();
+
+  // State
   const [grievance, setGrievance] = useState(null);
   const [history, setHistory] = useState([]);
   const [status, setStatus] = useState('');
@@ -17,6 +25,10 @@ const GrievanceDetailsPage = () => {
   const [selectedOfficial, setSelectedOfficial] = useState('');
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Helper: Load Grievance Data
+   * Fetches grievance details and history log.
+   */
   const loadData = async () => {
     try {
       const data = await fetchGrievanceDetails(grievanceId);
@@ -34,6 +46,10 @@ const GrievanceDetailsPage = () => {
     loadData();
   }, [grievanceId]);
 
+  /**
+   * Status Change Handler
+   * Updates status via API and reloads history.
+   */
   const handleStatusChange = async (newStatus) => {
     try {
       await updateGrievanceStatus(grievance.grievanceId, newStatus);
@@ -44,6 +60,10 @@ const GrievanceDetailsPage = () => {
     }
   };
 
+  /**
+   * Comment Submission Handler
+   * Adds internal note via API.
+   */
   const handleAddComment = async (e) => {
     e.preventDefault();
     if (!comment.trim()) return;
@@ -56,6 +76,10 @@ const GrievanceDetailsPage = () => {
     }
   };
 
+  /**
+   * Load Officials List
+   * Fetches list of assignable officials when "Assign" toggle is clicked.
+   */
   const handleLoadOfficials = async () => {
     if (!showAssign && officials.length === 0) {
       try {
@@ -68,6 +92,10 @@ const GrievanceDetailsPage = () => {
     setShowAssign(!showAssign);
   };
 
+  /**
+   * Assignment Handler
+   * Assigns the selected official to the grievance.
+   */
   const handleAssign = async () => {
     if (!selectedOfficial) return;
     try {
@@ -86,10 +114,12 @@ const GrievanceDetailsPage = () => {
 
   return (
     <div className="container">
+      {/* Back Navigation */}
       <button onClick={() => navigate(-1)} className="btn btn-secondary mb-4">
         <ArrowLeft size={16} style={{ marginRight: '8px' }} /> Back
       </button>
 
+      {/* Header: Title and Status Control */}
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl mb-2">{grievance.title}</h1>
@@ -117,6 +147,7 @@ const GrievanceDetailsPage = () => {
       </div>
 
       <div className="grid-cols-2">
+        {/* Left Column: Details & Attachments */}
         <div className="flex" style={{ flexDirection: 'column', gap: '1rem' }}>
           <div className="card">
             <h3 className="text-xl mb-4">Details</h3>
@@ -165,6 +196,7 @@ const GrievanceDetailsPage = () => {
           </div>
         </div>
 
+        {/* Right Column: Assignment & History */}
         <div className="flex" style={{ flexDirection: 'column', gap: '1rem' }}>
           {isOfficial && (
             <div className="card" style={{ backgroundColor: '#eff6ff', borderColor: '#dbeafe' }}>
@@ -177,21 +209,21 @@ const GrievanceDetailsPage = () => {
                   <UserPlus size={16} style={{ marginRight: '8px' }} /> Assign
                 </button>
               </div>
-                {showAssign && (
-                  <div className="flex gap-4">
-                    <select 
-                      className="input"
-                      value={selectedOfficial}
-                      onChange={(e) => setSelectedOfficial(e.target.value)}
-                    >
-                      <option value="">Select Official</option>
-                      {officials.map(off => (
-                        <option key={off.id} value={off.id}>{off.name}</option>
-                      ))}
-                    </select>
-                    <button className="btn btn-primary" onClick={handleAssign}>Assign</button>
-                  </div>
-                )}
+              {showAssign && (
+                <div className="flex gap-4">
+                  <select 
+                    className="input"
+                    value={selectedOfficial}
+                    onChange={(e) => setSelectedOfficial(e.target.value)}
+                  >
+                    <option value="">Select Official</option>
+                    {officials.map(off => (
+                      <option key={off.id} value={off.id}>{off.name}</option>
+                    ))}
+                  </select>
+                  <button className="btn btn-primary" onClick={handleAssign}>Assign</button>
+                </div>
+              )}
             </div>
           )}
 
@@ -213,6 +245,8 @@ const GrievanceDetailsPage = () => {
               ))}
               {history.length === 0 && <p className="text-gray text-sm">No activity yet.</p>}
             </div>
+            
+            {/* Comment Form */}
             <form onSubmit={handleAddComment} className="flex gap-4">
               <input 
                 type="text" 

@@ -1,3 +1,9 @@
+/**
+ * @file WelcomeScreen.tsx
+ * @description Splash/Landing screen for the mobile app.
+ * Provides entry points for Login and Registration.
+ */
+
 import React from "react";
 import { View, StyleSheet, Image } from "react-native";
 import { Button, Text } from "react-native-paper";

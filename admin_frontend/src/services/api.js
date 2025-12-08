@@ -1,7 +1,17 @@
+/**
+ * @file api.js
+ * @description Configures the core Axios instance for the Admin Frontend.
+ * Sets up base URL, request interceptors for auth tokens, and response interceptors for error handling.
+ */
+
 import axios from 'axios';
 
+// Base URL determines the target API - uses Proxy (/api) in dev or env variable
 const API_BASE_URL = import.meta.env.REACT_APP_API_BASE_URL || '/api';
 
+/**
+ * Create Axios instance with default JSON headers.
+ */
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -9,7 +19,10 @@ const api = axios.create({
   },
 });
 
-// Add a request interceptor to include the JWT token
+/**
+ * Request Interceptor
+ * Injects the Bearer Token from localStorage into the Authorization header of every request.
+ */
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -23,7 +36,11 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle token expiration
+/**
+ * Response Interceptor
+ * Handles global API errors.
+ * Specifically watches for 401 Unauthorized to clear invalid sessions.
+ */
 api.interceptors.response.use(
   (response) => {
     return response;
@@ -31,21 +48,16 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Token expired or invalid
+      // We clear local storage to ensure the app knows the user is logged out
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // window.location.href = '/login'; // Disabled to prevent loop, let UI handle it
+      
+      // Note: Automatic redirect to /login is currently disabled to prevent infinite loops 
+      // in case of persistent 401 errors on the dashboard.
+      // window.location.href = '/login'; 
     }
     return Promise.reject(error);
   }
 );
-
-// Mock data for simulation - REMOVED for real integration
-export const MOCK_USER_OFFICIAL = null;
-export const MOCK_USER_SUPER_ADMIN = null;
-
-// Simulate loading user context (mock) - REMOVED
-export const loadMockUser = (type = 'official') => {
-  return null;
-};
 
 export default api;

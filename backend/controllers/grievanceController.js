@@ -1,3 +1,9 @@
+/**
+ * @file grievanceController.js
+ * @description Controller for handling internal grievance logic for both Customers and Admins.
+ * Includes creating grievances, fetching personal history, and admin-specific retrievals.
+ */
+
 import Grievance from "../models/Grievance.js";
 import Category from "../models/Category.js";
 import User from "../models/User.js";
@@ -8,15 +14,17 @@ import s3Client from "../config/s3Client.js";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+/**
+ * Signs an S3 document URL to allow temporary access.
+ * Checks if the URL belongs to the configured S3 bucket and generates a signed URL.
+ * @param {string} url - The raw S3 URL or object path.
+ * @returns {Promise<string>} Authentication signed URL or original URL if not S3.
+ */
 const signAttachment = async (url) => {
   if (!url || !url.startsWith("http")) return url;
   try {
-    // Simple check: if it contains the bucket name, assume it's S3
-    // This handles both virtual-hosted-style and path-style
     if (url.includes(process.env.AWS_BUCKET_NAME)) {
-       // Extract Key. 
-       // Strategy: The key is everything after the bucket domain or bucket path.
-       // A safer way given we know the structure "grievances/..."
+       // Extract Key from URL
        const parts = url.split("grievances/");
        if (parts.length > 1) {
          const key = "grievances/" + parts[1];
@@ -34,13 +42,21 @@ const signAttachment = async (url) => {
   }
 };
 
+/**
+ * Generates a unique grievance ID with format PGS-TIMESTAMP-RANDOM.
+ * @returns {string} Unique ID string.
+ */
 const generateGrievanceId = () =>
   "PGS-" +
   Date.now().toString(36).toUpperCase() +
   "-" +
   Math.random().toString(36).substring(2, 6).toUpperCase();
 
-// Citizen – create grievance (logged-in)
+/**
+ * Create a new grievance (Authenticated User).
+ * Handles validation, file attachment paths, and initial notification.
+ * @route POST /api/grievances
+ */
 export const createGrievance = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -53,6 +69,7 @@ export const createGrievance = async (req, res) => {
     } = req.body;
 
     let isAnonymous = req.body.isAnonymous;
+    // Normalize boolean input from FormData
     if (isAnonymous === "true") isAnonymous = true;
     else if (isAnonymous === "false") isAnonymous = false;
     else isAnonymous = !!isAnonymous;
@@ -103,7 +120,7 @@ export const createGrievance = async (req, res) => {
 
     const g = await Grievance.create(grievanceData);
 
-    // Create Attachment documents
+    // Create Attachment records
     if (allFiles.length > 0) {
       const Attachment = (await import("../models/Attachment.js")).default;
       const attachmentDocs = allFiles.map((f) => ({
@@ -116,7 +133,7 @@ export const createGrievance = async (req, res) => {
       await Attachment.insertMany(attachmentDocs);
     }
 
-    // notify user (if not anonymous)
+    // Send notification if not anonymous
     if (!isAnonymous && userId) {
       await createAndSendNotification(
         userId,
@@ -137,7 +154,11 @@ export const createGrievance = async (req, res) => {
   }
 };
 
-// Anonymous – no auth
+/**
+ * Create a new anonymous grievance.
+ * Similar to createGrievance but bypasses user authentication checks.
+ * @route POST /api/grievances/anonymous
+ */
 export const createAnonymousGrievance = async (req, res) => {
   try {
     const {
@@ -180,24 +201,15 @@ export const createAnonymousGrievance = async (req, res) => {
   }
 };
 
-// Citizen – own grievances
+/**
+ * Get grievances for the logged-in user.
+ * @route GET /api/grievances/me
+ */
 export const getMyGrievances = async (req, res) => {
   try {
-    console.log("🔍 GET MY GRIEVANCES - userId:", req.user.id);
-    
     const list = await Grievance.find({ userId: req.user.id })
       .populate("category", "name key")
       .sort({ createdAt: -1 });
-    
-    console.log("🔍 Found grievances:", list.length);
-    if (list.length > 0) {
-      console.log("🔍 First grievance:", {
-        _id: list[0]._id,
-        grievanceId: list[0].grievanceId,
-        userId: list[0].userId,
-        status: list[0].status,
-      });
-    }
     
     res.json(list);
   } catch (err) {
@@ -206,7 +218,11 @@ export const getMyGrievances = async (req, res) => {
   }
 };
 
-// Citizen – single grievance by grievanceId
+/**
+ * Get details of a single grievance for the logged-in user.
+ * Signs attachment URLs for S3 access.
+ * @route GET /api/grievances/:id
+ */
 export const getSingleGrievance = async (req, res) => {
   try {
     const found = await Grievance.findOne({
@@ -230,7 +246,10 @@ export const getSingleGrievance = async (req, res) => {
   }
 };
 
-// Admin – list all
+/**
+ * (Admin) Get all grievances.
+ * @route GET /api/admin/grievances/all
+ */
 export const adminGetAll = async (req, res) => {
   try {
     const list = await Grievance.find()
@@ -253,27 +272,18 @@ export const adminGetAll = async (req, res) => {
   }
 };
 
-// Admin – get grievance by grievanceId
+/**
+ * (Admin) Get single grievance details.
+ * Includes history logs and signed attachment URLs.
+ * @route GET /api/admin/grievances/:id
+ */
 export const adminGetOne = async (req, res) => {
   try {
     const g = await Grievance.findOne({ grievanceId: req.params.id })
       .populate("category", "name key")
-      .populate("assignedTo", "firstName lastName email")
       .populate("assignedTo", "firstName lastName email");
 
     if (!g) return res.status(404).json({ message: "Grievance not found" });
-
-    // Enforce Department Access - REMOVED for single admin policy
-    // if (req.user.role !== 'superadmin') { 
-    //   if (req.user.managedCategories && req.user.managedCategories.length > 0) {
-    //      const grievanceCategoryKey = g.category?.key;
-    //      if (!req.user.managedCategories.includes(grievanceCategoryKey)) {
-    //         return res.status(403).json({ message: "Access denied: You do not manage this category." });
-    //      }
-    //   } else {
-    //      return res.status(403).json({ message: "Access denied: No managed categories assigned." });
-    //   }
-    // }
 
     const history = await StatusHistory.find({ grievance: g._id })
       .populate("changedBy", "firstName lastName email")
@@ -291,7 +301,10 @@ export const adminGetOne = async (req, res) => {
   }
 };
 
-// Admin – update status
+/**
+ * (Admin) Update grievance status manually via old endpoint logic.
+ * @deprecated Use adminController.updateGrievanceStatus instead.
+ */
 export const updateStatus = async (req, res) => {
   try {
     const { status, note } = req.body;
@@ -331,7 +344,10 @@ export const updateStatus = async (req, res) => {
   }
 };
 
-// Admin – assign to staff
+/**
+ * (Admin) Assign grievance to staff manually via old endpoint logic.
+ * @deprecated Use adminController.assignOfficial instead.
+ */
 export const assignGrievance = async (req, res) => {
   try {
     const { assignedTo } = req.body;
@@ -357,7 +373,10 @@ export const assignGrievance = async (req, res) => {
   }
 };
 
-// Attachments (citizen)
+/**
+ * Add attachments to an existing grievance.
+ * @route POST /api/grievances/:id/attachments
+ */
 export const addAttachments = async (req, res) => {
   try {
     const files = req.files || [];

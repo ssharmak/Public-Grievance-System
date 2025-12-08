@@ -1,3 +1,9 @@
+/**
+ * @file TrackGrievancesScreen.tsx
+ * @description Screen for tracking the status of active grievances.
+ * Filters and displays grievances that are "Submitted", "In Review", "Assigned", or "In Progress".
+ */
+
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import {

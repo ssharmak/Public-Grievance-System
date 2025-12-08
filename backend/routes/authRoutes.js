@@ -1,4 +1,9 @@
-// backend/routes/authRoutes.js
+/**
+ * @file authRoutes.js
+ * @description Routes for user authentication and authorization.
+ * Handles registration, login, and password reset workflows.
+ */
+
 import express from "express";
 import { body } from "express-validator";
 import {
@@ -10,7 +15,11 @@ import {
 
 const router = express.Router();
 
-// Register validations
+/**
+ * @route POST /api/auth/register
+ * @desc Register a new user (Citizen).
+ * Validates strictly for required fields and password strength.
+ */
 router.post(
   "/register",
   [
@@ -37,7 +46,10 @@ router.post(
   register
 );
 
-// Login validations
+/**
+ * @route POST /api/auth/login
+ * @desc Authenticate user and return JWT token.
+ */
 router.post(
   "/login",
   [
@@ -47,14 +59,20 @@ router.post(
   login
 );
 
-// Forgot Password OTP
+/**
+ * @route POST /api/auth/forgot-password-otp
+ * @desc Step 1 of Password Reset: Request OTP.
+ */
 router.post(
   "/forgot-password-otp",
   [body("primaryContact").notEmpty().withMessage("Primary contact required")],
   forgotPasswordOtp
 );
 
-// Reset Password with OTP
+/**
+ * @route POST /api/auth/reset-password-otp
+ * @desc Step 2 of Password Reset: Verify OTP and set new password.
+ */
 router.post(
   "/reset-password-otp",
   [

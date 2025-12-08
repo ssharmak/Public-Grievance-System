@@ -1,9 +1,19 @@
+/**
+ * @file api.ts
+ * @description Centralized Axios instance configuration for the Mobile App.
+ * Handles base URL setup, authentication headers, and response logging.
+ */
+
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Put the IP address here
+// API Base URL (Update this based on environment: Local or AWS)
 export const API_BASE = "http://13.201.75.180:5000/api";
 
+/**
+ * Axios instance with default configuration.
+ * Timeout set to 60s for slow networks.
+ */
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 60000,
@@ -13,7 +23,10 @@ const api = axios.create({
   },
 });
 
-// Attach JWT token in every request (defensive)
+/**
+ * Request Interceptor
+ * Automatically attaches the Bearer token from AsyncStorage to every request.
+ */
 api.interceptors.request.use(
   async (config) => {
     try {
@@ -31,7 +44,10 @@ api.interceptors.request.use(
   }
 );
 
-// Optional: log responses for debugging (remove in production)
+/**
+ * Response Interceptor
+ * Logs API errors for easier debugging during development.
+ */
 api.interceptors.response.use(
   (res) => res,
   (err) => {

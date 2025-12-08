@@ -1,3 +1,9 @@
+/**
+ * @file SystemAdminPage.jsx
+ * @description Page for Super Admin tasks (e.g., managing user roles and categories).
+ * Currently uses mock data for demonstration purposes as full admin management backend is in Phase 2.
+ */
+
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Navigate } from 'react-router-dom';
@@ -16,14 +22,20 @@ const MOCK_CATEGORIES = [
 
 const SystemAdminPage = () => {
   const { isSuperAdmin } = useAuth();
+  
+  // State for mock management
   const [users, setUsers] = useState(MOCK_USERS);
   const [categories, setCategories] = useState(MOCK_CATEGORIES);
   const [newCategory, setNewCategory] = useState('');
 
+  // Protect route: Only Super Admins allowed
   if (!isSuperAdmin) {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
+  /**
+   * Add Category Handler (Mock)
+   */
   const handleAddCategory = (e) => {
     e.preventDefault();
     if (!newCategory.trim()) return;
@@ -37,6 +49,7 @@ const SystemAdminPage = () => {
       <h1 className="text-2xl mb-6">System Administration</h1>
 
       <div className="grid-cols-2">
+        {/* User Management Section */}
         <div className="card">
           <h2 className="text-xl mb-4">User Role Management</h2>
           <table className="table">
@@ -70,6 +83,7 @@ const SystemAdminPage = () => {
           </table>
         </div>
 
+        {/* Category Management Section */}
         <div className="card">
           <h2 className="text-xl mb-4">Category Management</h2>
           <form onSubmit={handleAddCategory} className="flex gap-4 mb-4">

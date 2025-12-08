@@ -1,3 +1,10 @@
+/**
+ * @file ProfileScreen.tsx
+ * @description User Profile Management Screen.
+ * Allows users to view and update personal details, contact info, and address.
+ * Includes functionality for Phone Number Verification via OTP.
+ */
+
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -20,7 +27,6 @@ import {
   Divider,
   Portal,
   Modal,
-  IconButton,
 } from "react-native-paper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -101,7 +107,11 @@ export default function ProfileScreen({ navigation }: any) {
     navigation.reset({ index: 0, routes: [{ name: "Login" }] });
   };
 
-  // Phone Verification Handlers
+  /**
+   * Phone Verification handlers
+   * Step 1: Send OTP to registered number.
+   * Step 2: Verify OTP entered by user.
+   */
   const handleRequestVerification = async () => {
     try {
       setVerifying(true);
@@ -123,7 +133,7 @@ export default function ProfileScreen({ navigation }: any) {
       Alert.alert("Success", "Phone number verified!");
       setShowOtpModal(false);
       setOtp("");
-      loadProfile(); // Reload to update status
+      loadProfile(); // Reload to update verified status icon
     } catch (err: any) {
       Alert.alert("Error", err.response?.data?.message || "Invalid OTP");
     } finally {

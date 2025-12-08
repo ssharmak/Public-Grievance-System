@@ -1,4 +1,9 @@
-// mobile/App.tsx
+/**
+ * @file App.tsx
+ * @description Main entry point for the React Native Mobile App.
+ * Configures Navigation (Stack Navigator) and Theme Provider (PaperProvider).
+ */
+
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -17,6 +22,11 @@ import ForgotPasswordScreen from "./screens/ForgotPasswordScreen";
 
 const Stack = createNativeStackNavigator();
 
+/**
+ * Main App Component
+ * Defines the navigation stack for the application.
+ * Initial Route: Welcome
+ */
 export default function App() {
   return (
     <PaperProvider>

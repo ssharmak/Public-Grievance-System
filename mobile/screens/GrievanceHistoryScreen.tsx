@@ -1,3 +1,9 @@
+/**
+ * @file GrievanceHistoryScreen.tsx
+ * @description Screen displaying the full history of all submitted grievances.
+ * Shows a list of grievances with their status, creation date, and tracking ID.
+ */
+
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import {
@@ -42,6 +48,10 @@ export default function GrievanceHistoryScreen({ navigation }: any) {
     }
   };
 
+  /**
+   * Effect: Reloads history whenever the screen gains focus.
+   * Ensures the list is up-to-date after submitting a new grievance.
+   */
   useEffect(() => {
     if (isFocused) load();
   }, [isFocused]);

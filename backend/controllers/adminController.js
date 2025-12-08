@@ -1,22 +1,36 @@
+/**
+ * @file adminController.js
+ * @description Controller for Admin and Official specific functionalities.
+ * Handles dashboard summaries, grievance management (list, update, assign), and official management.
+ */
+
 import Grievance from '../models/Grievance.js';
 import User from '../models/User.js';
-import Category from '../models/Category.js'; // Import Category model
+import Category from '../models/Category.js';
 import StatusHistory from '../models/StatusHistory.js';
 import { createAndSendNotification } from '../utils/notificationService.js';
 
-// Helper to get category IDs from keys
+/**
+ * Helper: Resolve category keys to MongoDB ObjectIDs
+ * @param {string[]} keys - Array of category keys (strings)
+ * @returns {Promise<Array>} List of Category ObjectIDs
+ */
 const getCategoryIdsFromKeys = async (keys) => {
   if (!keys || keys.length === 0) return [];
   const categories = await Category.find({ key: { $in: keys } });
   return categories.map(c => c._id);
 };
 
+/**
+ * Get Dashboard Summary Statistics
+ * Calculates totals for Pending, Resolved, Rejected, and In Progress grievances.
+ * @route GET /api/admin/grievances/summary
+ */
 export const getGrievanceSummary = async (req, res) => {
   try {
-    console.log(`[Admin] Summary requested by ${req.user.email} (${req.user.role})`);
-    
-    const filter = {};
+    const filter = {}; // Defaults to all grievances
 
+    // Execute count queries in parallel for performance could be optimized, but sequential is fine for now
     const total = await Grievance.countDocuments(filter);
     const resolved = await Grievance.countDocuments({ ...filter, status: 'Resolved' });
     const rejected = await Grievance.countDocuments({ ...filter, status: 'Rejected' });
@@ -25,18 +39,13 @@ export const getGrievanceSummary = async (req, res) => {
       ...filter, 
       status: { $in: ['Submitted', 'In Review', 'Assigned', 'Pending'] } 
     });
-    
-    console.log(`[Admin] Summary Result: Total=${total}, Pending=${pending}, Rejected=${rejected}, InProgress=${inProgress}`);
-
-    const myDepartmentPending = pending; 
 
     res.json({
       total,
       pending,
       resolved,
       rejected,
-      inProgress,
-      myDepartmentPending
+      inProgress
     });
   } catch (error) {
     console.error('Summary Error:', error);
@@ -44,6 +53,11 @@ export const getGrievanceSummary = async (req, res) => {
   }
 };
 
+/**
+ * Get All Grievances
+ * Retrieves a list of all grievances sorted by date (newest first).
+ * @route GET /api/admin/grievances/all
+ */
 export const getAllGrievances = async (req, res) => {
   try {
     const filter = {};
@@ -53,6 +67,7 @@ export const getAllGrievances = async (req, res) => {
       .populate('assignedTo', 'firstName lastName')
       .sort({ createdAt: -1 });
 
+    // Map to frontend-friendly format
     const mapped = grievances.map(g => ({
       id: g.grievanceId,
       _id: g._id,
@@ -71,29 +86,26 @@ export const getAllGrievances = async (req, res) => {
   }
 };
 
+/**
+ * Update Grievance Status
+ * Changes the status of a grievance and logs the action in history.
+ * Sends a notification to the citizen.
+ * @route PUT /api/admin/:grievanceId/status
+ */
 export const updateGrievanceStatus = async (req, res) => {
   try {
     const { grievanceId } = req.params;
     const { status } = req.body;
     
-    // Find grievance and populate category to check access
+    // Find grievance and populate category
     const grievance = await Grievance.findOne({ grievanceId }).populate('category');
     if (!grievance) return res.status(404).json({ message: 'Grievance not found' });
-
-    // Enforce Department Access - REMOVED as per requirement for single admin
-    // if (req.user.role !== 'superadmin') {
-    //   const grievanceCategoryKey = grievance.category?.key;
-    //   if (!req.user.managedCategories.includes(grievanceCategoryKey)) {
-    //     console.warn(`[Admin] Access Denied: User ${req.user.email} tried to update ${grievanceId} (Category: ${grievanceCategoryKey})`);
-    //     return res.status(403).json({ message: 'Access denied: You do not manage this category.' });
-    //   }
-    // }
 
     const oldStatus = grievance.status;
     grievance.status = status;
     await grievance.save();
 
-    // Log history
+    // Log status change in history
     await StatusHistory.create({
       grievance: grievance._id,
       oldStatus,
@@ -102,7 +114,7 @@ export const updateGrievanceStatus = async (req, res) => {
       note: `Status updated to ${status}`
     });
 
-    // Notify
+    // Notify the user about the status update
     if (grievance.userId) {
       await createAndSendNotification(
         grievance.userId,
@@ -119,26 +131,27 @@ export const updateGrievanceStatus = async (req, res) => {
   }
 };
 
+/**
+ * Add Comment to Grievance
+ * Adds an internal note/comment to the grievance history.
+ * @route POST /api/admin/:grievanceId/comment
+ */
 export const addComment = async (req, res) => {
   try {
     const { grievanceId } = req.params;
     const { text } = req.body;
 
-    // In a real app, we'd have a Comment model. 
-    // For now, we might just log it in StatusHistory or if Grievance has a comments array.
-    // Assuming Grievance schema might NOT have comments array yet based on previous file view.
-    // Let's check Grievance model. If not, we'll use StatusHistory as a "comment".
-    
     const grievance = await Grievance.findOne({ grievanceId });
     if (!grievance) return res.status(404).json({ message: 'Grievance not found' });
 
+    // Log comment in history
     await StatusHistory.create({
       grievance: grievance._id,
       oldStatus: grievance.status,
-      newStatus: grievance.status, // No change
+      newStatus: grievance.status,
       changedBy: req.user.id,
-      note: text, // The comment
-      isComment: true // Flag if schema supports it, otherwise just 'note'
+      note: text,
+      isComment: true
     });
 
     res.json({ message: 'Comment added' });
@@ -148,6 +161,11 @@ export const addComment = async (req, res) => {
   }
 };
 
+/**
+ * Get List of Officials
+ * Retrieves all users with 'official' or 'admin' roles for assignment purposes.
+ * @route GET /api/admin/users/officials
+ */
 export const getOfficials = async (req, res) => {
   try {
     const officials = await User.find({ role: { $in: ['official', 'admin'] } })
@@ -167,6 +185,12 @@ export const getOfficials = async (req, res) => {
   }
 };
 
+/**
+ * Assign Official to Grievance
+ * Assigns a specific official to a grievance and updates status to 'Assigned'.
+ * Sends a notification to the assigned official.
+ * @route POST /api/admin/:grievanceId/assign
+ */
 export const assignOfficial = async (req, res) => {
   try {
     const { grievanceId } = req.params;
@@ -178,13 +202,13 @@ export const assignOfficial = async (req, res) => {
     const official = await User.findById(officialId);
     if (!official) return res.status(404).json({ message: 'Official not found' });
 
-    // Update grievance
+    // Update grievance assignment
     const oldStatus = grievance.status;
     grievance.assignedTo = officialId;
-    grievance.status = 'Assigned'; // Auto-update status to Assigned
+    grievance.status = 'Assigned';
     await grievance.save();
 
-    // Log history
+    // Log assignment in history
     await StatusHistory.create({
       grievance: grievance._id,
       oldStatus,
@@ -193,12 +217,8 @@ export const assignOfficial = async (req, res) => {
       note: `Assigned to ${official.firstName} ${official.lastName}`,
     });
 
-    // Notify Official
+    // Notify the assigned official
     if (official.email) {
-      // Assuming we have a way to notify via email or push
-      // For now using the existing notification service which might be push-only or email-based
-      // The prompt says "Send a notification to the assigned official."
-      // We'll use createAndSendNotification if it supports user IDs.
       await createAndSendNotification(
         official._id,
         'New Grievance Assigned',

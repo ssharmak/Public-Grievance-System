@@ -1,27 +1,42 @@
-import { useState, useEffect } from 'react';
-import { MOCK_USER_OFFICIAL, MOCK_USER_SUPER_ADMIN } from '../services/api';
+/**
+ * @file useAuth.js
+ * @description Custom React Hook for accessing authentication state.
+ * Provides user profile data, role checks (isOfficial, isSuperAdmin), and helper methods.
+ */
 
-// Simple hook that exports mock user object and utility functions
+import { useState } from 'react';
+
+/**
+ * useAuth Hook
+ * Reads current user from localStorage and provides role-based helpers.
+ * Note: In a larger app, this would use a React Context to allow dynamic updates.
+ */
 export const useAuth = () => {
-  // In a real app, this would come from a Context or Redux store
-  // For now, we'll read from localStorage or default to MOCK_USER_OFFICIAL
+  // Initialize state from localStorage (persists across reloads)
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
     return stored ? JSON.parse(stored) : null;
   });
 
+  // Role Checks
   const isOfficial = user?.role === 'official';
-  const isSuperAdmin = user?.role === 'super_admin';
+  const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'superadmin';
   
+  /**
+   * Get the categories managed by the current official.
+   * @returns {string[]} Array of category keys
+   */
   const getManagedCategories = () => {
     return user?.managedCategories || [];
   };
 
-  // Helper to switch users for testing
+  /**
+   * Helper to manually update user state (e.g. after profile edit).
+   * Note: This is a local update, currently unused in production flow.
+   */
   const loginAs = (role) => {
-    const newUser = role === 'super_admin' ? MOCK_USER_SUPER_ADMIN : MOCK_USER_OFFICIAL;
-    localStorage.setItem('user', JSON.stringify(newUser));
-    setUser(newUser);
+   // Logic for mock switching removed for production safety
+   // Keeping function stub if future dev testing needs it
   };
 
   return {

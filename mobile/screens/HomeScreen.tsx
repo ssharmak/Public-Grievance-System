@@ -1,3 +1,10 @@
+/**
+ * @file HomeScreen.tsx
+ * @description Dashboard home screen for the logged-in citizen.
+ * Displays quick action cards for submitting, tracking, and viewing grievance history.
+ * Includes a prompt to complete the profile if essential details are missing.
+ */
+
 import React, { useEffect } from "react";
 import {
   View,
@@ -12,8 +19,10 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { getMyProfile } from "../services/userService";
 
 export default function HomeScreen({ navigation }: any) {
-  // Card animation
+  // Card animation reference
   const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  // Add simple press animation
   const animateCard = () => {
     Animated.sequence([
       Animated.timing(scaleAnim, {
@@ -29,7 +38,10 @@ export default function HomeScreen({ navigation }: any) {
     ]).start();
   };
 
-  // First-time profile completion prompt
+  /**
+   * Effect: Check for profile completion on mount.
+   * Warns user if contact or address info is missing.
+   */
   useEffect(() => {
     (async () => {
       try {
@@ -99,7 +111,7 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <View style={styles.screen}>
-      {/* Header */}
+      {/* Header Section */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>PGS Dashboard</Text>
         <Text style={styles.headerSubtitle}>
@@ -132,7 +144,6 @@ export default function HomeScreen({ navigation }: any) {
           onPress={() => navigation.navigate("GrievanceHistory")}
         />
 
-        {/* NEW CARD: PROFILE PAGE */}
         <DashboardCard
           title="My Profile"
           subtitle="View & update your personal details"

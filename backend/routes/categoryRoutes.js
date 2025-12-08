@@ -1,3 +1,9 @@
+/**
+ * @file categoryRoutes.js
+ * @description Routes for managing categories.
+ * Public access for listing, Super Admin access for modifications.
+ */
+
 import express from "express";
 import { verifyToken, isSuperAdmin } from "../middlewares/authMiddleware.js";
 import {
@@ -9,12 +15,28 @@ import {
 
 const router = express.Router();
 
-// citizen/app
+/**
+ * @route GET /api/categories
+ * @desc List all active categories. (Public)
+ */
 router.get("/", getCategories);
 
-// superadmin
+/**
+ * @route POST /api/categories
+ * @desc Create a new category. (Super Admin)
+ */
 router.post("/", verifyToken, isSuperAdmin, createCategory);
+
+/**
+ * @route PATCH /api/categories/:id
+ * @desc Update an existing category. (Super Admin)
+ */
 router.patch("/:id", verifyToken, isSuperAdmin, updateCategory);
+
+/**
+ * @route DELETE /api/categories/:id
+ * @desc Soft delete a category. (Super Admin)
+ */
 router.delete("/:id", verifyToken, isSuperAdmin, deleteCategory);
 
 export default router;

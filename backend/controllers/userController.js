@@ -1,8 +1,16 @@
+/**
+ * @file userController.js
+ * @description Controller for general user operations not covered by Auth or Profile.
+ * Currently handles Push Notification token registration.
+ */
+
 import User from "../models/User.js";
 
-// @route PUT /api/profile/register-token
-// @desc Register push token for the user
-// @access Private
+/**
+ * Register a Push Notification Token (Expo).
+ * Associates the device token with the user profile for sending alerts.
+ * @route PUT /api/user/push-token (or referenced via auth route structure)
+ */
 export const registerPushToken = async (req, res) => {
   try {
     const { pushToken } = req.body;

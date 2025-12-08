@@ -1,3 +1,9 @@
+/**
+ * @file index.js
+ * @description Main router entry point.
+ * Aggregates all submodule routes into the main /api path.
+ */
+
 import express from "express";
 import authRoutes from "./authRoutes.js";
 import profileRoutes from "./profileRoutes.js";
@@ -8,6 +14,7 @@ import adminRoutes from "./adminRoutes.js";
 
 const router = express.Router();
 
+// Mount sub-routes
 router.use("/auth", authRoutes);
 router.use("/profile", profileRoutes);
 router.use("/grievances", grievanceRoutes);

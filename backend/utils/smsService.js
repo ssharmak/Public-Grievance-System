@@ -1,5 +1,18 @@
+/**
+ * @file smsService.js
+ * @description Utility service for sending SMS messages.
+ * Uses the Twilio client configured in smsConfig.js to send text messages.
+ */
+
 import { getTwilioClient } from '../config/smsConfig.js';
 
+/**
+ * Sends an SMS message to a specified phone number.
+ * 
+ * @param {string} to - The recipient's phone number (E.164 format recommended, e.g., +1234567890).
+ * @param {string} body - The text content of the SMS.
+ * @returns {Promise<import("twilio").MessageInstance | null>} The Twilio message instance if successful, or null if failed.
+ */
 export const sendSMS = async (to, body) => {
   try {
     const client = getTwilioClient();
@@ -14,9 +27,7 @@ export const sendSMS = async (to, body) => {
       return null;
     }
 
-    // Ensure phone number format (E.164) if needed, or rely on user input
-    // Assuming 'to' is a valid phone number string
-    
+    // Attempt to create and send message
     const message = await client.messages.create({
       body,
       from,

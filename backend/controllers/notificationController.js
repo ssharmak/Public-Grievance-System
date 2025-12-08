@@ -1,15 +1,22 @@
+/**
+ * @file notificationController.js
+ * @description Controller for checking and sending notifications.
+ * Handles manually sending notifications and retrieving a user's notification history.
+ */
+
 import User from "../models/User.js";
 
-// Push token registration endpoints removed
-
-// @route POST /api/notifications/send
-// @desc Send a push notification manually (for testing/admin)
-// @access Private (Admin only - middleware to be added in route)
+/**
+ * Send a push notification manually.
+ * (Primarily for testing or admin broadcasts)
+ * @route POST /api/notifications/send
+ * @access Private (Admin)
+ */
 export const sendNotification = async (req, res) => {
   try {
     const { userId, title, message } = req.body;
     
-    // Dynamic import to avoid circular dependency issues if any
+    // Dynamic import to avoid potential circular dependencies
     const { createAndSendNotification } = await import("../utils/notificationService.js");
     
     await createAndSendNotification(userId, title, message);
@@ -21,9 +28,12 @@ export const sendNotification = async (req, res) => {
   }
 };
 
-// @route GET /api/notifications
-// @desc Get user notifications
-// @access Private
+/**
+ * Get the current user's notifications.
+ * Returns the latest 50 notifications.
+ * @route GET /api/notifications
+ * @access Private
+ */
 export const getMyNotifications = async (req, res) => {
   try {
     const Notification = (await import("../models/Notification.js")).default;

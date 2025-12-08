@@ -1,3 +1,10 @@
+/**
+ * @file GrievanceDetailsScreen.tsx
+ * @description Detailed view of a specific grievance.
+ * Displays title, description, current status, location, and attachments.
+ * Allows viewing/opening attachment files.
+ */
+
 import React, { useEffect, useState } from "react";
 import { View, ScrollView, StyleSheet, Linking } from "react-native";
 import {
@@ -130,9 +137,9 @@ export default function GrievanceDetailsScreen({ route, navigation }: any) {
             <Card.Content>
               {g.attachments.map((a: string, i: number) => {
                 let url = a;
+                // Ensure full URL for external linking if stored as relative path
                 if (!a.startsWith("http")) {
                    const baseUrl = API_BASE.replace("/api", "");
-                   // Ensure 'a' starts with / if not present, though usually it does from backend
                    const path = a.startsWith("/") ? a : "/" + a;
                    url = baseUrl + path;
                 }
